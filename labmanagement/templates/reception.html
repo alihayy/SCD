@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Receptionist Dashboard</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #e9fdf6, #f5faf9);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 1rem;
+      color: #333;
+    }
+
+    /* Header gradient bar */
+    .dashboard-header {
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(90deg, #008970, #006D5B);
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      letter-spacing: 0.5px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .dashboard-header:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+
+    .card {
+      border-radius: 14px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      border: none;
+      background-color: #fff;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+
+    .required::after {
+      content: " *";
+      color: red;
+    }
+
+    .btn-success {
+      background: linear-gradient(90deg, #008970, #006D5B);
+      border: none;
+      transition: all 0.3s ease;
+    }
+
+    .btn-success:hover {
+      background: linear-gradient(90deg, #00a383, #007c68);
+      transform: translateY(-2px);
+    }
+
+    .btn-outline-success {
+      color: #006D5B;
+      border-color: #006D5B;
+      transition: all 0.3s ease;
+    }
+
+    .btn-outline-success:hover {
+      background: linear-gradient(90deg, #008970, #006D5B);
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    #successPopup {
+      border-left: 5px solid #008970;
+      font-weight: 500;
+      background-color: #e7fff4;
+      border-radius: 8px;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    table.dataTable thead {
+      background: linear-gradient(90deg, #008970, #006D5B);
+      color: #fff;
+    }
+
+    table.dataTable tbody tr:hover {
+      background: #e9fdf6 !important;
+    }
+
+    /* Hover effects for form fields */
+    input:focus, textarea:focus, select:focus {
+      border-color: #00a383 !important;
+      box-shadow: 0 0 0 0.15rem rgba(0, 137, 112, 0.25) !important;
+      transition: all 0.2s ease-in-out;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 768px) {
+      .dashboard-header {
+        text-align: center;
+        margin-bottom: 10px;
+        font-size: 1.3rem;
+      }
+      .top-actions {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 10px;
+      }
+      .top-actions a {
+        width: 100%;
+      }
+      .text-end {
+        text-align: center !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 top-actions flex-wrap">
+    <h2 class="dashboard-header mb-0">Receptionist Dashboard</h2>
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-danger mt-2 mt-md-0">Logout</a>
+  </div>
+
+  <!-- Register Patient -->
+  <div class="card p-4 mb-4">
+    <h4 class="mb-3 text-success">🩺 Register New Patient</h4>
+
+    <form id="patientForm">
+      <div class="row g-3">
+        <div class="col-md-4 col-sm-6">
+          <label class="form-label required">Registration Date</label>
+          <input type="date" name="reg_date" class="form-control" value="{{ today_date }}" required>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+          <label class="form-label required">Reporting Date</label>
+          <input type="date" name="reporting_date" class="form-control" required>
+        </div>
+
+        <div class="col-md-6 col-sm-12">
+          <label class="form-label required">Patient Name</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+          <label class="form-label required">Gender</label>
+          <select name="gender" class="form-select" required>
+            <option value="">Select</option>
+            <option>Male</option>
+            <option>Female</option>
+          </select>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+          <label class="form-label required">Age</label>
+          <input type="number" name="age" class="form-control" required>
+        </div>
+
+        <div class="col-md-6 col-sm-12">
+          <label class="form-label required">Consultant / Doctor</label>
+          <input type="text" name="doctor" class="form-control" required>
+        </div>
+
+        <div class="col-md-6 col-sm-12">
+          <label class="form-label required">Total Amount</label>
+          <input type="number" name="amount" class="form-control" required>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label required">Test Investigations</label>
+          <textarea name="tests" class="form-control" rows="3" placeholder="Enter required investigations" required></textarea>
+        </div>
+      </div>
+
+      <div class="mt-3 text-end">
+        <button type="submit" class="btn btn-success px-4">+ Add Patient</button>
+      </div>
+    </form>
+
+    <!-- Success Popup -->
+    <div id="successPopup" class="alert alert-success mt-3" style="display:none;">
+      ✅ Patient added successfully!  
+      <br><br>
+      <div class="d-flex flex-wrap gap-2">
+        <button id="downloadBtn" class="btn btn-primary btn-sm">Download PDF</button>
+        <button id="printBtn" class="btn btn-secondary btn-sm">Print</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Patients Button -->
+  <div class="card p-4 text-end">
+    <a href="{{ url_for('patients.saved_patients') }}" class="btn btn-outline-success w-auto w-sm-100">
+      💾 View Saved Patients
+    </a>
+  </div>
+
+  <!-- JS -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+
+  <script>
+    $(document).ready(function () {
+      $('#patientForm').on('submit', async function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        const response = await fetch("{{ url_for('patients.add_patient_route') }}", {
+          method: "POST",
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          $('#successPopup').slideDown();
+          const pdfUrl = "/patients/" + result.mr_no + "/receipt";
+
+          $('#downloadBtn').off('click').on('click', () => window.open(pdfUrl, "_blank"));
+          $('#printBtn').off('click').on('click', () => {
+            const win = window.open(pdfUrl, "_blank");
+            win.print();
+          });
+
+          this.reset();
+        } else {
+          alert(result.message || "Something went wrong!");
+        }
+      });
+    });
+  </script>
+</body>
+</html>
