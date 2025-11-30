@@ -11,6 +11,7 @@ from datetime import datetime
 import logging
 from abc import ABC, abstractmethod
 import json
+from db import get_connection  # ADD THIS IMPORT
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -507,8 +508,49 @@ def add_patient_route():
             "message": f"Server error: {str(e)}"
         }), 500
 
+
 # ----------------------------------------
-# 3️⃣ Generate PDF Receipt (Enhanced)
+# 3️⃣ NEW ROUTE: Get All Tests for Dropdown
+# ----------------------------------------
+@patients_bp.route('/api/tests', methods=['GET'])
+def get_all_tests():
+    """Get all active tests for dropdown selection"""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Query to get all active tests
+            cursor.execute("""
+                SELECT TestId, TestName, Price, Category, NormalRange 
+                FROM Tests 
+                WHERE IsActive = 1 
+                ORDER BY TestName
+            """)
+            
+            tests = []
+            for row in cursor.fetchall():
+                tests.append({
+                    'TestId': row[0],
+                    'TestName': row[1],
+                    'Price': float(row[2]) if row[2] else 0.0,
+                    'Category': row[3],
+                    'NormalRange': row[4]
+                })
+            
+            logger.info(f"Retrieved {len(tests)} tests from database")
+            
+            return jsonify(tests)
+            
+    except Exception as e:
+        logger.error(f"Error fetching tests: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Failed to load tests"
+        }), 500
+
+
+# ----------------------------------------
+# 4️⃣ Generate PDF Receipt (Enhanced)
 # ----------------------------------------
 @patients_bp.route('/<int:mr_no>/receipt')
 def generate_pdf(mr_no):
@@ -523,7 +565,7 @@ def generate_detailed_report(mr_no):
 
 
 # ----------------------------------------
-# 4️⃣ Saved Patients Page - FIXED VERSION
+# 5️⃣ Saved Patients Page - FIXED VERSION
 # ----------------------------------------
 @patients_bp.route('/saved', methods=['GET'])
 def saved_patients():
@@ -550,7 +592,7 @@ def saved_patients():
 
 
 # ----------------------------------------
-# 5️⃣ Patient Statistics API
+# 6️⃣ Patient Statistics API
 # ----------------------------------------
 @patients_bp.route('/statistics', methods=['GET'])
 def get_patient_statistics():
@@ -589,7 +631,7 @@ def get_patient_statistics():
 
 
 # ----------------------------------------
-# 6️⃣ Health Check Endpoint
+# 7️⃣ Health Check Endpoint
 # ----------------------------------------
 @patients_bp.route('/health', methods=['GET'])
 def health_check():
@@ -622,3 +664,103 @@ def health_check():
                 message="Patients service health check failed"
             )
         ), 500
+
+
+# ----------------------------------------
+# 8️⃣ UPDATE PATIENT ROUTE - ADD THIS
+# ----------------------------------------
+@patients_bp.route('/update/<int:mr_no>', methods=['PUT'])
+def update_patient(mr_no):
+    """Update patient information"""
+    try:
+        print(f"=== UPDATE PATIENT REQUEST FOR MR_NO: {mr_no} ===")
+        
+        # Get JSON data from request
+        data = request.get_json()
+        print("Update data received:", data)
+        
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "No data provided for update"
+            }), 400
+        
+        # Required fields validation
+        required_fields = ['name', 'age', 'gender', 'doctor', 'tests', 'amount']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        
+        if missing_fields:
+            return jsonify({
+                "success": False,
+                "message": f"Missing required fields: {', '.join(missing_fields)}"
+            }), 400
+        
+        # Convert numeric fields
+        try:
+            data["age"] = int(data["age"])
+            data["amount"] = float(data["amount"])
+        except (ValueError, TypeError) as e:
+            return jsonify({
+                "success": False,
+                "message": "Invalid age or amount format"
+            }), 400
+        
+        # Update patient in database
+        result = Patient.update_patient(mr_no, data)
+        
+        if result["success"]:
+            return jsonify({
+                "success": True,
+                "message": "Patient updated successfully",
+                "mr_no": mr_no
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": result.get("message", "Failed to update patient")
+            }), 400
+            
+    except Exception as e:
+        print(f"EXCEPTION in update_patient: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            "success": False,
+            "message": f"Server error: {str(e)}"
+        }), 500
+
+
+# ----------------------------------------
+# 9️⃣ DELETE PATIENT ROUTE - ADD THIS
+# ----------------------------------------
+@patients_bp.route('/delete/<int:mr_no>', methods=['DELETE'])
+def delete_patient(mr_no):
+    """Delete patient record"""
+    try:
+        print(f"=== DELETE PATIENT REQUEST FOR MR_NO: {mr_no} ===")
+        
+        # Delete patient from database
+        result = Patient.delete_patient(mr_no)
+        
+        if result["success"]:
+            return jsonify({
+                "success": True,
+                "message": "Patient deleted successfully",
+                "mr_no": mr_no
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": result.get("message", "Failed to delete patient")
+            }), 400
+            
+    except Exception as e:
+        print(f"EXCEPTION in delete_patient: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            "success": False,
+            "message": f"Server error: {str(e)}"
+        }), 500

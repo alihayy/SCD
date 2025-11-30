@@ -8,6 +8,7 @@ from routes.patients import patients_bp
 from routes.receipts import receipts_bp
 from routes.reports import reports_bp
 
+
 app = Flask(__name__)
 
 # Use environment variable for secret key (do NOT hardcode in production)

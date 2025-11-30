@@ -1,3 +1,4 @@
+<!-- reception.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,9 +9,8 @@
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <!-- DataTables CSS -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+  <!-- Select2 CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
 
   <style>
     /* Reduced motion support */
@@ -109,15 +109,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    table.dataTable thead {
-      background: linear-gradient(90deg, #008970, #006D5B);
-      color: #fff;
-    }
-
-    table.dataTable tbody tr:hover {
-      background: #e9fdf6 !important;
-    }
-
     /* Hover effects for form fields */
     input:focus, textarea:focus, select:focus {
       border-color: #00a383 !important;
@@ -180,13 +171,52 @@
       z-index: 1100;
     }
 
-    /* Receipts section */
-    .receipts-table {
+    /* Test Selection Styles */
+    .test-summary {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+      border: 1px solid #e9ecef;
+    }
+
+    .selected-test {
+      background: #e9f7ef;
+      border: 1px solid #008970;
+      border-radius: 5px;
+      padding: 8px 12px;
+      margin: 5px;
+      display: inline-block;
       font-size: 0.9rem;
     }
 
-    .receipt-actions .btn {
-      margin: 2px;
+    .selected-test .remove-test {
+      cursor: pointer;
+      margin-left: 8px;
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    .selected-test .remove-test:hover {
+      color: #b02a37;
+    }
+
+    .amount-display {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #008970;
+    }
+
+    /* Select2 customization */
+    .select2-container--default .select2-selection--multiple {
+      border: 1px solid #ced4da;
+      border-radius: 0.375rem;
+      min-height: 120px;
+    }
+
+    .select2-container--default.select2-container--focus .select2-selection--multiple {
+      border-color: #00a383;
+      box-shadow: 0 0 0 0.15rem rgba(0, 137, 112, 0.25);
     }
 
     /* Responsive tweaks */
@@ -207,8 +237,10 @@
       .text-end {
         text-align: center !important;
       }
-      .receipt-actions {
-        text-align: center;
+      .selected-test {
+        display: block;
+        width: 100%;
+        margin: 5px 0;
       }
     }
 
@@ -251,6 +283,7 @@
 
       <form id="patientForm" novalidate>
         <div class="row g-3">
+          <!-- Personal Information -->
           <div class="col-md-4 col-sm-6">
             <label for="reg_date" class="form-label required">Registration Date</label>
             <input type="date" name="reg_date" id="reg_date" class="form-control" value="{{ today_date }}" required 
@@ -271,8 +304,7 @@
                    aria-required="true" placeholder="Enter patient full name">
             <div class="invalid-feedback" id="name_error">Please enter a valid patient name (letters and spaces only).</div>
           </div>
-           <div class="col-md-6 col-sm-12">
-          
+
           <div class="col-md-3 col-sm-6">
             <label for="gender" class="form-label required">Gender</label>
             <select name="gender" id="gender" class="form-select" required aria-required="true">
@@ -292,25 +324,47 @@
           </div>
 
           <div class="col-md-6 col-sm-12">
+            <label for="phone" class="form-label">Phone Number</label>
+            <input type="text" name="phone" id="phone" class="form-control" placeholder="0300-1234567">
+          </div>
+
+          <div class="col-12">
+            <label for="address" class="form-label">Address</label>
+            <textarea name="address" id="address" class="form-control" rows="2" placeholder="Enter patient address"></textarea>
+          </div>
+
+          <div class="col-md-6 col-sm-12">
             <label for="doctor" class="form-label required">Consultant / Doctor</label>
             <input type="text" name="doctor" id="doctor" class="form-control" required
                    aria-required="true" placeholder="Doctor's name">
             <div class="invalid-feedback" id="doctor_error">Please enter doctor's name.</div>
           </div>
 
-          <div class="col-md-6 col-sm-12">
-            <label for="amount" class="form-label required">Total Amount</label>
-            <input type="number" name="amount" id="amount" class="form-control" required
-                   aria-required="true" min="0" step="0.01" placeholder="0.00">
-            <div class="invalid-feedback" id="amount_error">Please enter a valid amount greater than 0.</div>
+          <!-- Test Selection Section -->
+          <div class="col-12">
+            <label for="tests_select" class="form-label required">Select Tests</label>
+            <select name="tests_select" id="tests_select" class="form-control" multiple="multiple" style="width: 100%" required>
+              <!-- Tests will be loaded dynamically -->
+            </select>
+            <small class="text-muted">Type to search tests. You can select multiple tests.</small>
+            <div class="invalid-feedback" id="tests_error">Please select at least one test.</div>
           </div>
 
+          <!-- Selected Tests Summary -->
           <div class="col-12">
-            <label for="tests" class="form-label required">Test Investigations</label>
-            <textarea name="tests" id="tests" class="form-control" rows="3" 
-                      placeholder="Enter required investigations" required aria-required="true"></textarea>
-            <div class="invalid-feedback" id="tests_error">Please enter test investigations.</div>
+            <div id="selectedTestsSummary" class="test-summary" style="display: none;">
+              <h6>Selected Tests:</h6>
+              <div id="selectedTestsList"></div>
+              <div class="mt-3">
+                <strong>Total Amount: <span class="amount-display">Rs. <span id="totalAmount">0.00</span></span></strong>
+              </div>
+            </div>
           </div>
+
+          <!-- Hidden fields for form submission -->
+          <input type="hidden" name="tests" id="tests">
+          <input type="hidden" name="amount" id="amount">
+
         </div>
 
         <div class="mt-3 text-end">
@@ -327,56 +381,16 @@
         <div class="d-flex flex-wrap gap-2">
           <button id="downloadBtn" class="btn btn-primary btn-sm">Download PDF</button>
           <button id="printBtn" class="btn btn-secondary btn-sm">Print</button>
-          <button id="createReceiptBtn" class="btn btn-info btn-sm">Create Receipt</button>
         </div>
-      </div>
-    </div>
-
-    <!-- Receipts Management Section -->
-    <div class="card p-4 mb-4">
-      <h4 class="mb-3 text-success">🧾 Receipts Management</h4>
-      
-      <div class="row mb-3">
-        <div class="col-md-6">
-          <div class="input-group">
-            <input type="number" id="receiptPatientId" class="form-control" placeholder="Patient MR Number" aria-label="Patient MR Number">
-            <input type="number" id="receiptAmount" class="form-control" placeholder="Amount" aria-label="Amount" step="0.01">
-            <button class="btn btn-success" type="button" id="createReceiptManualBtn">
-              Create Receipt
-            </button>
-          </div>
-          <div class="invalid-feedback" id="receipt_error"></div>
-        </div>
-        <div class="col-md-6 text-end">
-          <button class="btn btn-outline-primary" id="refreshReceiptsBtn">
-            🔄 Refresh
-          </button>
-        </div>
-      </div>
-
-      <div class="table-responsive">
-        <table id="receiptsTable" class="table table-striped table-hover receipts-table">
-          <thead>
-            <tr>
-              <th>Receipt ID</th>
-              <th>Patient ID</th>
-              <th>Patient Name</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="receiptsTableBody">
-            <!-- Receipts will be loaded here -->
-          </tbody>
-        </table>
       </div>
     </div>
 
     <!-- Saved Patients Button -->
-    <div class="card p-4 text-end">
-      <a href="{{ url_for('patients.saved_patients') }}" class="btn btn-outline-success w-auto w-sm-100">
-        💾 View Saved Patients
+    <div class="card p-4 text-center">
+      <h5 class="text-success mb-3">💾 Manage All Patients</h5>
+      <p class="text-muted mb-3">View, edit, delete patients and manage receipts</p>
+      <a href="{{ url_for('patients.saved_patients') }}" class="btn btn-success w-auto px-4 py-2">
+        📋 Go to Patients Management
       </a>
     </div>
   </main>
@@ -384,35 +398,34 @@
   <!-- JS -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 
-  <script>
+ <script>
     $(document).ready(function () {
       let lastAddedPatientId = null;
+      let selectedTests = []; // Store selected tests with details
+      let allTests = []; // Store all tests from database
 
-      // Initialize DataTable for receipts
-      const receiptsTable = $('#receiptsTable').DataTable({
-        responsive: true,
-        pageLength: 10,
-        order: [[4, 'desc']],
-        language: {
-          search: "Search receipts:",
-          lengthMenu: "Show _MENU_ receipts"
-        }
+      // Initialize Select2 for tests dropdown
+      $('#tests_select').select2({
+        placeholder: "Search and select tests...",
+        allowClear: true,
+        width: '100%',
+        closeOnSelect: false
       });
 
-      // Load receipts on page load
-      loadReceipts();
+      // Load tests on page load
+      loadTests();
 
       // Real-time validation for patient form
-      $('#patientForm input, #patientForm select, #patientForm textarea').on('blur', function() {
+      $('#patientForm input, #patientForm textarea, #patientForm select').on('blur', function() {
         validatePatientField($(this));
+      });
+
+      // When tests are selected/deselected
+      $('#tests_select').on('change', function() {
+        updateSelectedTests();
+        validatePatientField($('#tests_select'));
       });
 
       // Enhanced patient form submission
@@ -421,7 +434,7 @@
         
         // Validate all fields
         let isValid = true;
-        $('#patientForm input, #patientForm select, #patientForm textarea').each(function() {
+        $('#patientForm input, #patientForm textarea, #patientForm select').each(function() {
           if (!validatePatientField($(this))) {
             isValid = false;
           }
@@ -440,12 +453,28 @@
 
         try {
           const formData = new FormData(this);
+          
+          // Update the hidden fields with current data
+          $('#tests').val(selectedTests.map(test => test.name).join(', '));
+          $('#amount').val(calculateTotalAmount());
+          
+          // Add the hidden fields to form data
+          formData.set('tests', $('#tests').val());
+          formData.set('amount', $('#amount').val());
+          
+          console.log('Submitting form data...', {
+            tests: $('#tests').val(),
+            amount: $('#amount').val(),
+            selectedTests: selectedTests
+          });
+
           const response = await fetch("{{ url_for('patients.add_patient_route') }}", {
             method: "POST",
             body: formData
           });
 
           const result = await response.json();
+          console.log('Server response:', result);
 
           if (result.success) {
             lastAddedPatientId = result.mr_no;
@@ -459,17 +488,11 @@
               const win = window.open(pdfUrl, "_blank");
               win.print();
             });
-            $('#createReceiptBtn').off('click').on('click', () => {
-              $('#receiptPatientId').val(result.mr_no);
-              $('#receiptAmount').focus();
-              showToast('Patient MR number auto-filled. Please enter amount and create receipt.', 'info');
-            });
 
             showToast('Patient added successfully!', 'success');
             this.reset();
-            
-            // Refresh receipts list
-            loadReceipts();
+            $('#tests_select').val(null).trigger('change');
+            $('#selectedTestsSummary').hide();
           } else {
             let errorMessage = result.message || "Something went wrong!";
             if (result.errors) {
@@ -486,79 +509,105 @@
         }
       });
 
-      // Manual receipt creation - FIXED: Using /receipts instead of /api/receipts
-      $('#createReceiptManualBtn').on('click', async function() {
-        const patientId = $('#receiptPatientId').val().trim();
-        const amount = $('#receiptAmount').val().trim();
-
-        // Validation
-        if (!patientId || !amount) {
-          showToast('Please enter both Patient ID and Amount.', 'error');
-          return;
-        }
-
-        if (isNaN(patientId) || patientId <= 0) {
-          showToast('Please enter a valid Patient ID.', 'error');
-          return;
-        }
-
-        if (isNaN(amount) || amount <= 0) {
-          showToast('Please enter a valid amount greater than 0.', 'error');
-          return;
-        }
-
-        const btn = $(this);
-        btn.addClass('btn-loading');
-        btn.prop('disabled', true);
-
+      // Load tests from database
+      async function loadTests() {
         try {
-          // FIXED: Using /receipts endpoint (not /api/receipts)
-          const response = await fetch("/receipts", {
-            method: "POST",
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              patient_id: parseInt(patientId),
-              total: parseFloat(amount)
-            })
-          });
-
-          // Check if response is OK
+          const response = await fetch("{{ url_for('patients.get_all_tests') }}");
           if (!response.ok) {
             throw new Error(`Server returned ${response.status}`);
           }
-
-          const result = await response.json();
-
-          if (result.success) {
-            showToast('Receipt created successfully!', 'success');
-            $('#receiptPatientId').val('');
-            $('#receiptAmount').val('');
-            loadReceipts();
-          } else {
-            const errorMsg = result.errors ? result.errors.join(', ') : 
-                            result.message || 'Failed to create receipt';
-            showToast(errorMsg, 'error');
-          }
+          
+          allTests = await response.json();
+          console.log('Tests loaded successfully:', allTests.length);
+          
+          // Populate dropdown
+          $('#tests_select').empty(); // Clear existing options
+          allTests.forEach(test => {
+            $('#tests_select').append(
+              new Option(`${test.TestName} - Rs. ${test.Price.toFixed(2)}`, test.TestId, false, false)
+            );
+          });
+          
         } catch (error) {
-          console.error('Receipt creation error:', error);
-          showToast('Failed to create receipt. Please check patient ID and try again.', 'error');
-        } finally {
-          btn.removeClass('btn-loading');
-          btn.prop('disabled', false);
+          console.error('Error loading tests:', error);
+          showToast('Error loading tests list. Please refresh the page.', 'error');
         }
-      });
+      }
 
-      // Refresh receipts
-      $('#refreshReceiptsBtn').on('click', function() {
-        loadReceipts();
-        showToast('Receipts list refreshed', 'info');
-      });
+      // Update selected tests and calculate total
+      function updateSelectedTests() {
+        const selectedValues = $('#tests_select').val() || [];
+        
+        // Clear current selection
+        selectedTests = [];
+        
+        // Get details for each selected test
+        selectedValues.forEach(testId => {
+          const test = allTests.find(t => t.TestId == testId);
+          if (test) {
+            selectedTests.push({
+              id: test.TestId,
+              name: test.TestName,
+              price: test.Price
+            });
+          }
+        });
+
+        // Update UI
+        updateTestsSummary();
+      }
+
+      // Update tests summary display
+      function updateTestsSummary() {
+        const summaryDiv = $('#selectedTestsSummary');
+        const listDiv = $('#selectedTestsList');
+        const totalAmountSpan = $('#totalAmount');
+        
+        if (selectedTests.length === 0) {
+          summaryDiv.hide();
+          return;
+        }
+
+        // Clear previous list
+        listDiv.empty();
+        
+        // Add each test to summary
+        selectedTests.forEach(test => {
+          listDiv.append(`
+            <div class="selected-test">
+              ${test.name} - Rs. ${test.price.toFixed(2)}
+              <span class="remove-test" onclick="removeTest(${test.id})">×</span>
+            </div>
+          `);
+        });
+
+        // Update total
+        const total = calculateTotalAmount();
+        totalAmountSpan.text(total.toFixed(2));
+        
+        // Update hidden fields
+        $('#tests').val(selectedTests.map(t => t.name).join(', '));
+        $('#amount').val(total);
+        
+        // Show summary
+        summaryDiv.show();
+      }
+
+      // Calculate total amount
+      function calculateTotalAmount() {
+        return selectedTests.reduce((total, test) => total + test.price, 0);
+      }
+
+      // Remove test from selection (global function)
+      window.removeTest = function(testId) {
+        // Remove from select2
+        const currentValues = $('#tests_select').val() || [];
+        const newValues = currentValues.filter(id => id != testId);
+        $('#tests_select').val(newValues).trigger('change');
+      }
 
       // Field validation function
       function validatePatientField(field) {
-        const value = field.val().trim();
         const fieldName = field.attr('name');
         
         field.removeClass('is-invalid is-valid');
@@ -566,15 +615,33 @@
         let isValid = true;
         let errorMessage = '';
 
+        // Special handling for different field types
+        let value;
+        if (fieldName === 'tests_select') {
+            // For Select2 multiple select, use selectedTests array
+            value = selectedTests.length;
+        } else {
+            // For regular fields, get value safely
+            value = field.val();
+            if (typeof value === 'string') {
+                value = value.trim();
+            } else if (Array.isArray(value)) {
+                // If it's an array (like multiple select), check if it has values
+                value = value.length;
+            } else {
+                value = value ? String(value) : '';
+            }
+        }
+
         switch(fieldName) {
           case 'name':
             if (!value) {
               isValid = false;
               errorMessage = 'Patient name is required.';
-            } else if (!/^[A-Za-z\s\.\-]+$/.test(value)) {
+            } else if (typeof value === 'string' && !/^[A-Za-z\s\.\-]+$/.test(value)) {
               isValid = false;
               errorMessage = 'Name can only contain letters, spaces, dots, and hyphens.';
-            } else if (value.length < 2) {
+            } else if (typeof value === 'string' && value.length < 2) {
               isValid = false;
               errorMessage = 'Name must be at least 2 characters long.';
             }
@@ -604,35 +671,9 @@
             if (!value) {
               isValid = false;
               errorMessage = 'Doctor name is required.';
-            } else if (value.length < 2) {
+            } else if (typeof value === 'string' && value.length < 2) {
               isValid = false;
               errorMessage = 'Doctor name must be at least 2 characters long.';
-            }
-            break;
-            
-          case 'amount':
-            if (!value) {
-              isValid = false;
-              errorMessage = 'Amount is required.';
-            } else {
-              const amount = parseFloat(value);
-              if (isNaN(amount) || amount <= 0) {
-                isValid = false;
-                errorMessage = 'Amount must be a positive number.';
-              } else if (amount > 1000000) {
-                isValid = false;
-                errorMessage = 'Amount seems too high. Please verify.';
-              }
-            }
-            break;
-            
-          case 'tests':
-            if (!value) {
-              isValid = false;
-              errorMessage = 'Test investigations are required.';
-            } else if (value.length < 5) {
-              isValid = false;
-              errorMessage = 'Please provide more detailed test information.';
             }
             break;
             
@@ -650,65 +691,23 @@
               }
             }
             break;
+            
+          case 'tests_select':
+            // Check if any tests are selected
+            if (value === 0 || selectedTests.length === 0) {
+              isValid = false;
+              errorMessage = 'Please select at least one test.';
+            }
+            break;
         }
 
         if (!isValid) {
           field.addClass('is-invalid');
-        } else if (value.length > 0) {
+        } else {
           field.addClass('is-valid');
         }
 
         return isValid;
-      }
-
-      // Enhanced loadReceipts function - FIXED: Using /receipts instead of /api/receipts
-      async function loadReceipts() {
-        try {
-          // FIXED: Using /receipts endpoint (not /api/receipts)
-          const response = await fetch("/receipts");
-          
-          if (!response.ok) {
-            throw new Error(`Server returned ${response.status}`);
-          }
-
-          const result = await response.json();
-          
-          receiptsTable.clear();
-          
-          if (result.success && result.data && result.data.receipts) {
-            result.data.receipts.forEach(receipt => {
-              receiptsTable.row.add([
-                receipt.receipt_id,
-                receipt.patient_mr_no,
-                receipt.patient_name || 'N/A',
-                receipt.formatted_total,
-                new Date(receipt.created_at).toLocaleDateString(),
-                `<div class="receipt-actions">
-                  <button class="btn btn-sm btn-outline-primary view-receipt" data-id="${receipt.receipt_id}">View</button>
-                  <button class="btn btn-sm btn-outline-danger delete-receipt" data-id="${receipt.receipt_id}">Delete</button>
-                 </div>`
-              ]);
-            });
-            showToast(`Loaded ${result.data.receipts.length} receipts`, 'success');
-          } else {
-            receiptsTable.row.add([
-              '', '', 'No receipts found', '', '', ''
-            ]);
-            showToast('No receipts found', 'info');
-          }
-          
-          receiptsTable.draw();
-        } catch (error) {
-          console.error('Error loading receipts:', error);
-          showToast('Failed to load receipts. Please check your connection.', 'error');
-          
-          // Add empty state to table
-          receiptsTable.clear();
-          receiptsTable.row.add([
-            '', '', 'Error loading receipts', '', '', ''
-          ]);
-          receiptsTable.draw();
-        }
       }
 
       // Toast notification function
@@ -737,56 +736,6 @@
         // Escape key closes toasts
         if (e.key === 'Escape') {
           $('.toast').toast('hide');
-        }
-        
-        // Enter key on receipt form
-        if (e.key === 'Enter' && ($('#receiptPatientId').is(':focus') || $('#receiptAmount').is(':focus'))) {
-          $('#createReceiptManualBtn').click();
-        }
-      });
-
-      // View receipt details - FIXED: Using /receipts instead of /api/receipts
-      $(document).on('click', '.view-receipt', async function() {
-        const receiptId = $(this).data('id');
-        try {
-          const response = await fetch(`/receipts/${receiptId}`);
-          const result = await response.json();
-          
-          if (result.success) {
-            const receipt = result.data.receipt;
-            const receiptInfo = `
-              Receipt ID: ${receipt.receipt_id}
-              Patient: ${receipt.patient_name} (ID: ${receipt.patient_mr_no})
-              Amount: ${receipt.formatted_total}
-              Date: ${new Date(receipt.created_at).toLocaleString()}
-            `;
-            alert(receiptInfo);
-          } else {
-            showToast('Failed to load receipt details', 'error');
-          }
-        } catch (error) {
-          showToast('Error loading receipt', 'error');
-        }
-      });
-
-      // Delete receipt - FIXED: Using /receipts instead of /api/receipts
-      $(document).on('click', '.delete-receipt', function() {
-        const receiptId = $(this).data('id');
-        
-        if (confirm('Are you sure you want to delete this receipt? This action cannot be undone.')) {
-          fetch(`/receipts/${receiptId}`, { method: 'DELETE' })
-            .then(response => response.json())
-            .then(result => {
-              if (result.success) {
-                showToast('Receipt deleted successfully', 'success');
-                loadReceipts();
-              } else {
-                showToast('Failed to delete receipt', 'error');
-              }
-            })
-            .catch(error => {
-              showToast('Error deleting receipt', 'error');
-            });
         }
       });
 

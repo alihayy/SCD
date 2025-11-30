@@ -10,7 +10,7 @@ def get_connection():
     If DB_USER/DB_PASS are not set, it uses Trusted_Connection=yes (Windows auth).
     """
     server = os.environ.get("DB_SERVER", "DESKTOP-ONOJF0L")
-    database = os.environ.get("DB_NAME", "lms")
+    database = os.environ.get("DB_NAME", "Lmss")
     driver = os.environ.get("DB_DRIVER", "ODBC Driver 17 for SQL Server")
     db_user = os.environ.get("DB_USER")
     db_pass = os.environ.get("DB_PASS")

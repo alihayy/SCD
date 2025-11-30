@@ -1,4 +1,4 @@
-# models/patient_model.py - UPDATE THIS FILE
+# models/patient_model.py - UPDATED WITH EDIT AND DELETE METHODS
 
 import re
 from db import get_connection
@@ -142,6 +142,186 @@ class Patient:
         except Exception as e:
             print(f"Error fetching patients: {str(e)}")  # Debug print
             return []
+
+        finally:
+            try:
+                if cursor:
+                    cursor.close()
+                if conn:
+                    conn.close()
+            except Exception as e:
+                print(f"Error closing connection: {str(e)}")
+
+    # =============================================
+    # NEW METHODS FOR EDIT AND DELETE FUNCTIONALITY
+    # =============================================
+
+    @staticmethod
+    def update_patient(mr_no, data):
+        """Update patient in database"""
+        conn = None
+        cursor = None
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            # Check if patient exists
+            cursor.execute("SELECT * FROM Patients WHERE MrNo = ?", (mr_no,))
+            if not cursor.fetchone():
+                return {"success": False, "message": "Patient not found"}
+            
+            # Update patient
+            cursor.execute("""
+                UPDATE Patients 
+                SET Name = ?, Age = ?, Gender = ?, Doctor = ?, Tests = ?, Amount = ?
+                WHERE MrNo = ?
+            """, (
+                data['name'],
+                data['age'], 
+                data['gender'],
+                data['doctor'],
+                data['tests'],
+                data['amount'],
+                mr_no
+            ))
+            
+            conn.commit()
+            
+            if cursor.rowcount > 0:
+                return {"success": True, "message": "Patient updated successfully"}
+            else:
+                return {"success": False, "message": "No changes made"}
+                
+        except Exception as e:
+            print(f"Database update error: {str(e)}")
+            if conn:
+                conn.rollback()
+            return {"success": False, "message": f"Database error: {str(e)}"}
+        
+        finally:
+            try:
+                if cursor:
+                    cursor.close()
+                if conn:
+                    conn.close()
+            except Exception as e:
+                print(f"Error closing connection: {str(e)}")
+
+    @staticmethod  
+    def delete_patient(mr_no):
+        """Delete patient from database"""
+        conn = None
+        cursor = None
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            # Check if patient exists
+            cursor.execute("SELECT * FROM Patients WHERE MrNo = ?", (mr_no,))
+            if not cursor.fetchone():
+                return {"success": False, "message": "Patient not found"}
+            
+            # Delete patient
+            cursor.execute("DELETE FROM Patients WHERE MrNo = ?", (mr_no,))
+            conn.commit()
+            
+            if cursor.rowcount > 0:
+                return {"success": True, "message": "Patient deleted successfully"}
+            else:
+                return {"success": False, "message": "Failed to delete patient"}
+                
+        except Exception as e:
+            print(f"Database delete error: {str(e)}")
+            if conn:
+                conn.rollback()
+            return {"success": False, "message": f"Database error: {str(e)}"}
+        
+        finally:
+            try:
+                if cursor:
+                    cursor.close()
+                if conn:
+                    conn.close()
+            except Exception as e:
+                print(f"Error closing connection: {str(e)}")
+
+    @staticmethod
+    def get_patient_by_mr_no(mr_no):
+        """Get single patient by MR number"""
+        conn = None
+        cursor = None
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT MrNo, RegDate, ReportingDate, Name, Gender, Age, Doctor, Tests, Amount
+                FROM Patients 
+                WHERE MrNo = ?
+            """, (mr_no,))
+
+            cols = [col[0] for col in cursor.description]
+            snake_cols = [_to_snake(c) for c in cols]
+            row = cursor.fetchone()
+
+            if row:
+                return dict(zip(snake_cols, row))
+            else:
+                return None
+
+        except Exception as e:
+            print(f"Error fetching patient: {str(e)}")
+            return None
+
+        finally:
+            try:
+                if cursor:
+                    cursor.close()
+                if conn:
+                    conn.close()
+            except Exception as e:
+                print(f"Error closing connection: {str(e)}")
+
+    @staticmethod
+    def get_patient_statistics():
+        """Get patient statistics for dashboard"""
+        conn = None
+        cursor = None
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+
+            # Total patients count
+            cursor.execute("SELECT COUNT(*) FROM Patients")
+            total_patients = cursor.fetchone()[0]
+
+            # Total revenue
+            cursor.execute("SELECT SUM(Amount) FROM Patients")
+            total_revenue = cursor.fetchone()[0] or 0
+
+            # Gender distribution
+            cursor.execute("SELECT Gender, COUNT(*) FROM Patients GROUP BY Gender")
+            gender_distribution = {row[0]: row[1] for row in cursor.fetchall()}
+
+            # Today's patients
+            cursor.execute("SELECT COUNT(*) FROM Patients WHERE CAST(RegDate AS DATE) = CAST(GETDATE() AS DATE)")
+            today_patients = cursor.fetchone()[0]
+
+            return {
+                "total_patients": total_patients,
+                "total_revenue": float(total_revenue),
+                "gender_distribution": gender_distribution,
+                "today_patients": today_patients
+            }
+
+        except Exception as e:
+            print(f"Error fetching statistics: {str(e)}")
+            return {
+                "total_patients": 0,
+                "total_revenue": 0,
+                "gender_distribution": {},
+                "today_patients": 0
+            }
 
         finally:
             try:
