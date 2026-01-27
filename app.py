@@ -1,4 +1,3 @@
-# labmanagement/app.py
 import os
 from flask import Flask, jsonify, session
 from db import get_connection
@@ -50,20 +49,38 @@ def debug_session():
     return jsonify(dict(session))
 
 # ========================================
+# FAVICON FIX - ADD THIS ROUTE
+# ========================================
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204  # No content response to prevent 404 errors
+
+# ========================================
 # END DEBUG ROUTES
 # ========================================
 
-# Optional: store DB connection in config if you want a single shared connection (or better use pooling)
-connection = get_connection()
-app.config["DB_CONNECTION"] = connection
+# REMOVE THIS LINE: Do NOT store a shared DB connection
+# connection = get_connection()
+# app.config["DB_CONNECTION"] = connection
 
 # Register blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
 app.register_blueprint(patients_bp, url_prefix="/patients")
-app.register_blueprint(receipts_bp)  # REMOVE url_prefix="/receipts" - FIXED
+app.register_blueprint(receipts_bp, url_prefix="/receipts")  # ADD prefix back
 app.register_blueprint(reports_bp, url_prefix="/reports")
 app.register_blueprint(admin_bp)
+
+# ========================================
+# ERROR HANDLERS
+# ========================================
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({'error': 'Resource not found'}), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

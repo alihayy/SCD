@@ -11,7 +11,7 @@ from datetime import datetime
 import logging
 from abc import ABC, abstractmethod
 import json
-from db import get_connection  # ADD THIS IMPORT
+from db import get_connection
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -189,13 +189,8 @@ class DetailedReportPDFStrategy(PDFGenerationStrategy):
     """Strategy for generating detailed report PDFs (extensible for future)"""
     
     def generate(self, patient_data, buffer):
-        # Implementation for detailed reports
-        # This can be extended later for comprehensive lab reports
         return ReceiptPDFStrategy().generate(patient_data, buffer)
 
-# ---------------------------------------
-# NEW: LAB REPORT PDF STRATEGY
-# ---------------------------------------
 class LabReportPDFStrategy(PDFGenerationStrategy):
     """Strategy for generating detailed lab reports with ranges"""
     
@@ -207,19 +202,10 @@ class LabReportPDFStrategy(PDFGenerationStrategy):
             elements = []
             styles = getSampleStyleSheet()
             
-            # Header - SAME AS RECEIPT
             elements.extend(self._create_header(styles))
-            
-            # Patient Information - SAME AS RECEIPT
             elements.extend(self._create_patient_info(patient_data, styles))
-            
-            # Test Results Section - NEW WITH RANGES
             elements.extend(self._create_test_results(patient_data, styles))
-            
-            # Interpretation Section - NEW
             elements.extend(self._create_interpretation_section(styles))
-            
-            # Footer - SAME AS RECEIPT
             elements.extend(self._create_footer(styles))
             
             doc.build(elements)
@@ -231,7 +217,6 @@ class LabReportPDFStrategy(PDFGenerationStrategy):
             return {"success": False, "error": str(e)}
 
     def _create_header(self, styles):
-        """SAME HEADER LOGIC AS RECEIPT"""
         elements = []
         
         logo_path = "static/logo.png"
@@ -270,7 +255,6 @@ class LabReportPDFStrategy(PDFGenerationStrategy):
         return elements
 
     def _create_patient_info(self, patient_data, styles):
-        """SAME PATIENT INFO AS RECEIPT"""
         elements = []
         
         patient_info = [
@@ -296,10 +280,8 @@ class LabReportPDFStrategy(PDFGenerationStrategy):
         return elements
 
     def _create_test_results(self, patient_data, styles):
-        """NEW: Create test results with gender-specific ranges"""
         elements = []
         
-        # Title
         title = Paragraph(
             "<b><font size='14' color='#006D5B'>LABORATORY TEST REPORT</font></b>",
             styles['Heading2']
@@ -307,10 +289,8 @@ class LabReportPDFStrategy(PDFGenerationStrategy):
         elements.append(title)
         elements.append(Spacer(1, 12))
         
-        # Test results table with sample data
         gender = patient_data.get('gender', 'Male')
         
-        # Sample test data - This would come from database in real implementation
         test_data = [
             ["Test", "Result", f"Normal Range ({gender})", "Units", "Status"],
             ["Hemoglobin (Hb)", "14.2", "Male: 13.5-17.5, Female: 12.0-15.5", "g/dL", "Normal"],
@@ -343,7 +323,6 @@ class LabReportPDFStrategy(PDFGenerationStrategy):
         return elements
 
     def _create_interpretation_section(self, styles):
-        """Create interpretation/comment section"""
         elements = []
         
         interpretation_title = Paragraph(
@@ -366,7 +345,6 @@ class LabReportPDFStrategy(PDFGenerationStrategy):
         return elements
 
     def _create_footer(self, styles):
-        """SAME FOOTER AS RECEIPT"""
         elements = []
         
         footer_text = """
@@ -397,7 +375,6 @@ class PDFGenerator:
     def generate_pdf(self, patient_data, pdf_type="receipt"):
         """Generate PDF using the current strategy"""
         try:
-            # Set strategy based on PDF type
             if pdf_type == "detailed_report":
                 self.set_strategy(DetailedReportPDFStrategy())
             elif pdf_type == "lab_report":
@@ -577,7 +554,6 @@ class PatientService:
     def process_patient_addition(self, form_data):
         """Process patient addition with comprehensive validation"""
         try:
-            # Prepare data
             data = {
                 "reg_date": form_data.get('reg_date'),
                 "reporting_date": form_data.get('reporting_date'),
@@ -589,7 +565,6 @@ class PatientService:
                 "amount": form_data.get('amount')
             }
 
-            # Convert numeric fields
             if data["age"] and data["age"].isdigit():
                 data["age"] = int(data["age"])
 
@@ -598,7 +573,6 @@ class PatientService:
             except:
                 data["amount"] = None
 
-            # Validate data
             validation_errors = self.validate_patient_data(data)
             if validation_errors:
                 return self.response_factory.create_response(
@@ -607,7 +581,6 @@ class PatientService:
                     message="Patient data validation failed"
                 ), 400
 
-            # Send to model
             result = Patient.add_patient(data)
 
             if result["success"]:
@@ -645,7 +618,6 @@ class PatientService:
                     message="PDF generation failed"
                 ), 404
 
-            # Generate PDF
             pdf_result = self.pdf_generator.generate_pdf(patient, pdf_type)
             
             if pdf_result["success"]:
@@ -692,18 +664,16 @@ def patients_home():
         return render_template('error.html', 
                              error_message="Failed to load patients"), 500
 
-
 # ----------------------------------------
-# 2️⃣ Add Patient Route (Enhanced) - FIXED VERSION
+# 2️⃣ Add Patient Route (Enhanced)
 # ----------------------------------------
 @patients_bp.route('/add', methods=['POST'])
 def add_patient_route():
-    """Add new patient with comprehensive validation - FIXED VERSION"""
+    """Add new patient with comprehensive validation"""
     try:
         print("=== ADD PATIENT REQUEST RECEIVED ===")
         print("Form data received:", dict(request.form))
         
-        # Prepare data
         data = {
             "reg_date": request.form.get('reg_date'),
             "reporting_date": request.form.get('reporting_date'),
@@ -717,7 +687,6 @@ def add_patient_route():
         
         print("Processed data:", data)
         
-        # Check for empty fields
         missing_fields = [field for field, value in data.items() if not value]
         if missing_fields:
             error_msg = f"Missing fields: {', '.join(missing_fields)}"
@@ -727,7 +696,6 @@ def add_patient_route():
                 "errors": [error_msg]
             }), 400
 
-        # Convert numeric fields
         if data["age"]:
             try:
                 data["age"] = int(data["age"])
@@ -748,7 +716,6 @@ def add_patient_route():
 
         print("Calling Patient.add_patient with:", data)
         
-        # Send to model
         result = Patient.add_patient(data)
         print("Patient.add_patient result:", result)
 
@@ -774,46 +741,126 @@ def add_patient_route():
             "message": f"Server error: {str(e)}"
         }), 500
 
-
 # ----------------------------------------
-# 3️⃣ NEW ROUTE: Get All Tests for Dropdown
+# DEBUG ROUTE: Test Database Connection
 # ----------------------------------------
-@patients_bp.route('/api/tests', methods=['GET'])
-def get_all_tests():
-    """Get all active tests for dropdown selection"""
+@patients_bp.route('/debug/tests', methods=['GET'])
+def debug_tests():
+    """Debug route to test database connection and tests table"""
     try:
+        print("=== DEBUG TESTS ROUTE CALLED ===")
+        
         with get_connection() as conn:
             cursor = conn.cursor()
             
-            # Query to get all active tests
             cursor.execute("""
-                SELECT TestId, TestName, Price, Category, NormalRange 
+                SELECT COUNT(*) as table_count 
+                FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_NAME = 'Tests'
+            """)
+            table_exists = cursor.fetchone()[0]
+            print(f"Tests table exists: {table_exists > 0}")
+            
+            cursor.execute("SELECT COUNT(*) FROM Tests")
+            total_tests = cursor.fetchone()[0]
+            print(f"Total tests in database: {total_tests}")
+            
+            try:
+                cursor.execute("SELECT COUNT(*) FROM Tests WHERE IsActive = 1")
+                active_tests = cursor.fetchone()[0]
+            except Exception:
+                cursor.execute("SELECT COUNT(*) FROM Tests")
+                active_tests = cursor.fetchone()[0]
+            
+            print(f"Active tests: {active_tests}")
+            
+            cursor.execute("""
+                SELECT TOP 5 TestId, TestName, Price, Category 
+                FROM Tests 
+                ORDER BY TestName
+            """)
+            
+            columns = [column[0] for column in cursor.description]
+            test_samples = []
+            
+            for row in cursor.fetchall():
+                test = {}
+                for i, col in enumerate(columns):
+                    test[col] = row[i]
+                test_samples.append(test)
+            
+            return jsonify({
+                "success": True,
+                "table_exists": table_exists > 0,
+                "total_tests": total_tests,
+                "active_tests": active_tests,
+                "sample_tests": test_samples,
+                "message": f"Database check complete. Found {active_tests} tests."
+            })
+            
+    except Exception as e:
+        print(f"❌ Debug route error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+# ----------------------------------------
+# 3️⃣ NEW ROUTE: Get All Tests for Dropdown - FIXED
+# ----------------------------------------
+@patients_bp.route('/api/tests', methods=['GET'])
+def get_all_tests():
+    """Get all active tests for dropdown selection - FIXED FOR YOUR DATABASE"""
+    try:
+        print("=== GET_ALL_TESTS ROUTE CALLED ===")
+        
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Use Range_Text instead of NormalRange (your database column name)
+            cursor.execute("""
+                SELECT TestId, TestName, Price, Category, Range_Text 
                 FROM Tests 
                 WHERE IsActive = 1 
                 ORDER BY TestName
             """)
             
+            columns = [column[0] for column in cursor.description]
+            print(f"Query columns: {columns}")
+            
             tests = []
             for row in cursor.fetchall():
-                tests.append({
-                    'TestId': row[0],
-                    'TestName': row[1],
-                    'Price': float(row[2]) if row[2] else 0.0,
-                    'Category': row[3],
-                    'NormalRange': row[4]
-                })
+                test = {}
+                for i, col in enumerate(columns):
+                    value = row[i]
+                    if col == 'Price' and value is not None:
+                        try:
+                            test[col] = float(value)
+                        except:
+                            test[col] = 0.0
+                    else:
+                        test[col] = value
+                tests.append(test)
             
-            logger.info(f"Retrieved {len(tests)} tests from database")
+            print(f"✅ Retrieved {len(tests)} tests from database")
+            
+            if tests:
+                for i in range(min(3, len(tests))):
+                    print(f"Test {i+1}: {tests[i]}")
             
             return jsonify(tests)
             
     except Exception as e:
-        logger.error(f"Error fetching tests: {str(e)}")
+        print(f"❌ Error fetching tests: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
         return jsonify({
             "success": False,
-            "error": "Failed to load tests"
+            "error": f"Database error: {str(e)}"
         }), 500
-
 
 # ----------------------------------------
 # NEW ROUTE: Get All Tests with Details
@@ -831,7 +878,6 @@ def get_all_tests_with_details():
             "success": False,
             "error": "Failed to load tests details"
         }), 500
-
 
 # ----------------------------------------
 # NEW ROUTE: Get Test by ID
@@ -857,41 +903,33 @@ def get_test_by_id(test_id):
             "error": "Failed to load test details"
         }), 500
 
-
 # ----------------------------------------
-# 4️⃣ Generate PDF Receipt (Enhanced)
+# 4️⃣ Generate PDF Receipt
 # ----------------------------------------
 @patients_bp.route('/<int:mr_no>/receipt')
 def generate_pdf(mr_no):
     """Generate PDF receipt for patient"""
     return patient_service.generate_patient_pdf(mr_no, "receipt")
 
-
 @patients_bp.route('/<int:mr_no>/detailed-report')
 def generate_detailed_report(mr_no):
     """Generate detailed report for patient (extensible)"""
     return patient_service.generate_patient_pdf(mr_no, "detailed_report")
 
-
-# ----------------------------------------
-# NEW: Generate Lab Report PDF
-# ----------------------------------------
 @patients_bp.route('/<int:mr_no>/lab-report')
 def generate_lab_report(mr_no):
     """Generate lab report PDF with ranges"""
     return patient_service.generate_patient_pdf(mr_no, "lab_report")
 
-
 # ----------------------------------------
-# 5️⃣ Saved Patients Page - FIXED VERSION
+# 5️⃣ Saved Patients Page
 # ----------------------------------------
 @patients_bp.route('/saved', methods=['GET'])
 def saved_patients():
-    """Render saved patients page - FIXED VERSION"""
+    """Render saved patients page"""
     try:
         patients = Patient.get_all_patients()
         
-        # Calculate statistics for the template
         stats = {
             'total_patients': len(patients),
             'total_revenue': sum(float(p.get('amount', 0)) for p in patients),
@@ -907,7 +945,6 @@ def saved_patients():
         logger.error(f"Saved patients error: {str(e)}")
         return render_template('error.html', 
                              error_message="Failed to load saved patients"), 500
-
 
 # ----------------------------------------
 # NEW: Lab Reports Management Page
@@ -925,7 +962,6 @@ def lab_reports():
         logger.error(f"Lab reports error: {str(e)}")
         return render_template('error.html', 
                              error_message="Failed to load lab reports"), 500
-
 
 # ----------------------------------------
 # 6️⃣ Patient Statistics API
@@ -965,7 +1001,6 @@ def get_patient_statistics():
             )
         ), 500
 
-
 # ----------------------------------------
 # 7️⃣ Health Check Endpoint
 # ----------------------------------------
@@ -1001,9 +1036,8 @@ def health_check():
             )
         ), 500
 
-
 # ----------------------------------------
-# 8️⃣ UPDATE PATIENT ROUTE - ADD THIS
+# 8️⃣ UPDATE PATIENT ROUTE
 # ----------------------------------------
 @patients_bp.route('/update/<int:mr_no>', methods=['PUT'])
 def update_patient(mr_no):
@@ -1011,7 +1045,6 @@ def update_patient(mr_no):
     try:
         print(f"=== UPDATE PATIENT REQUEST FOR MR_NO: {mr_no} ===")
         
-        # Get JSON data from request
         data = request.get_json()
         print("Update data received:", data)
         
@@ -1021,7 +1054,6 @@ def update_patient(mr_no):
                 "message": "No data provided for update"
             }), 400
         
-        # Required fields validation
         required_fields = ['name', 'age', 'gender', 'doctor', 'tests', 'amount']
         missing_fields = [field for field in required_fields if not data.get(field)]
         
@@ -1031,7 +1063,6 @@ def update_patient(mr_no):
                 "message": f"Missing required fields: {', '.join(missing_fields)}"
             }), 400
         
-        # Convert numeric fields
         try:
             data["age"] = int(data["age"])
             data["amount"] = float(data["amount"])
@@ -1041,7 +1072,6 @@ def update_patient(mr_no):
                 "message": "Invalid age or amount format"
             }), 400
         
-        # Update patient in database
         result = Patient.update_patient(mr_no, data)
         
         if result["success"]:
@@ -1066,9 +1096,8 @@ def update_patient(mr_no):
             "message": f"Server error: {str(e)}"
         }), 500
 
-
 # ----------------------------------------
-# 9️⃣ DELETE PATIENT ROUTE - ADD THIS
+# 9️⃣ DELETE PATIENT ROUTE
 # ----------------------------------------
 @patients_bp.route('/delete/<int:mr_no>', methods=['DELETE'])
 def delete_patient(mr_no):
@@ -1076,7 +1105,6 @@ def delete_patient(mr_no):
     try:
         print(f"=== DELETE PATIENT REQUEST FOR MR_NO: {mr_no} ===")
         
-        # Delete patient from database
         result = Patient.delete_patient(mr_no)
         
         if result["success"]:
@@ -1100,8 +1128,8 @@ def delete_patient(mr_no):
             "success": False,
             "message": f"Server error: {str(e)}"
         }), 500
-    
-    # ----------------------------------------
+
+# ----------------------------------------
 # NEW: Simple Test Management Routes
 # ----------------------------------------
 @patients_bp.route('/tests/manage', methods=['GET'])
@@ -1127,7 +1155,6 @@ def manage_tests():
         logger.error(f"Manage tests error: {str(e)}")
         return render_template('error.html', 
                              error_message="Failed to load tests"), 500
-
 
 @patients_bp.route('/tests/update', methods=['POST'])
 def update_test_ranges():
@@ -1163,3 +1190,26 @@ def update_test_ranges():
     except Exception as e:
         logger.error(f"Update test error: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# ----------------------------------------
+# NEW: Quick Health Check
+# ----------------------------------------
+@patients_bp.route('/quick-check', methods=['GET'])
+def quick_check():
+    """Quick endpoint to verify tests are loading"""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM Tests")
+            count = cursor.fetchone()[0]
+            
+            return jsonify({
+                "success": True,
+                "message": f"Database connection successful. Found {count} tests in database.",
+                "tests_count": count
+            })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500

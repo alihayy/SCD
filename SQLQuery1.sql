@@ -796,7 +796,7 @@ GO
 UPDATE Users SET Password = 'Imran@4200', FullName = 'Administrator' 
 WHERE Username = 'admin';
 
-UPDATE Users SET Password = 'Rec@123', FullName = 'Reception Staff'
+UPDATE Users SET Password = 'Rec@001', FullName = 'Reception Staff'
 WHERE Username = 'reception';
 
 UPDATE Users SET Password = 'Tech@123', FullName = 'Lab Technician'
@@ -878,3 +878,19 @@ GROUP BY
     p.RegDate, p.Status;
 GO
 SELECT * FROM sys.views WHERE name = 'PatientSummary';
+
+SELECT Username, Password, Role FROM Users;
+SELECT UserId, Username, Password, Role, IsActive
+FROM Users
+WHERE Username='admin';
+
+
+-- UPDATE wala part - CORRECT IT
+UPDATE Users SET Password = 'Imran@4200', FullName = 'System Administrator' 
+WHERE Username = 'admin';
+
+UPDATE Users SET Password = 'Rec@001', FullName = 'Reception Staff'
+WHERE Username = 'reception';
+
+UPDATE Users SET Password = 'Tech@123', FullName = 'Lab Technician'
+WHERE Username = 'technician';

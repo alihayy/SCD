@@ -1002,30 +1002,66 @@
       });
 
       // Load tests from database
-      async function loadTests() {
-        try {
-          const response = await fetch("{{ url_for('patients.get_all_tests') }}");
-          if (!response.ok) {
-            throw new Error(`Server returned ${response.status}`);
-          }
-          
-          allTests = await response.json();
-          console.log('Tests loaded successfully:', allTests.length);
-          
-          // Populate dropdown
-          $('#tests_select').empty(); // Clear existing options
-          allTests.forEach(test => {
-            $('#tests_select').append(
-              new Option(`${test.TestName} - Rs. ${test.Price.toFixed(2)}`, test.TestId, false, false)
-            );
-          });
-          
-        } catch (error) {
-          console.error('Error loading tests:', error);
-          showToast('Error loading tests list. Please refresh the page.', 'error');
-        }
-      }
-
+    // Load tests from database - FIXED VERSION
+async function loadTests() {
+  try {
+    console.log('🔍 Loading tests from database...');
+    
+    // First test debug endpoint
+    const debugResponse = await fetch("/patients/debug/tests");
+    const debugData = await debugResponse.json();
+    console.log('Debug response:', debugData);
+    
+    if (!debugData.success) {
+      throw new Error('Database connection failed: ' + (debugData.error || 'Unknown error'));
+    }
+    
+    console.log(`📊 Database status: Found ${debugData.total_tests} tests`);
+    
+    // Now load all tests
+    const response = await fetch("/patients/api/tests");
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    allTests = await response.json();
+    console.log(`✅ Successfully loaded ${allTests.length} tests`);
+    
+    if (allTests.length === 0) {
+      console.warn('⚠️ Warning: No tests returned from database');
+      showToast('No tests found in database. Please check database connection.', 'warning');
+      
+      // Add placeholder
+      $('#tests_select').append(
+        new Option('No tests available - Check database', '', false, false)
+      );
+      return;
+    }
+    
+    // Clear and populate dropdown
+    $('#tests_select').empty();
+    
+    allTests.forEach(test => {
+      const price = test.Price ? parseFloat(test.Price).toFixed(2) : '0.00';
+      const testName = test.TestName || 'Unnamed Test';
+      const testId = test.TestId || '';
+      
+      $('#tests_select').append(
+        new Option(`${testName} - Rs. ${price}`, testId, false, false)
+      );
+    });
+    
+    // Refresh Select2
+    $('#tests_select').trigger('change');
+    
+    showToast(`Loaded ${allTests.length} tests successfully`, 'success');
+    
+  } catch (error) {
+    console.error('❌ Error loading tests:', error);
+    showToast(`Failed to load tests: ${error.message}`, 'error');
+  }
+}
       // Update tests summary display
       function updateTestsSummary() {
         const summaryDiv = $('#selectedTestsSummary');

@@ -1,4 +1,4 @@
-# admin.py - COMPLETE UPDATED VERSION WITH REAL-TIME REPORTS (FIXED FOR YOUR SCHEMA)
+# admin.py - COMPLETE UPDATED VERSION WITH REAL-TIME REPORTS AND FIXED TEST MANAGEMENT
 from flask import Blueprint, render_template, session, redirect, url_for, jsonify, request
 from db import get_connection
 from werkzeug.security import generate_password_hash
@@ -549,7 +549,7 @@ def get_yearly_overview():
         conn.close()
 
 # ===========================================
-# EXISTING APIs (KEEP THESE AS THEY ARE - ALREADY CORRECT)
+# STAFF MANAGEMENT APIs
 # ===========================================
 
 @admin_bp.route("/admin/staff")
@@ -612,6 +612,10 @@ def add_staff():
         cursor.close()
         conn.close()
 
+# ===========================================
+# DOCTOR MANAGEMENT APIs
+# ===========================================
+
 @admin_bp.route("/admin/doctors")
 def get_doctors():
     """Get all doctors"""
@@ -666,16 +670,44 @@ def add_doctor():
         cursor.close()
         conn.close()
 
+# ===========================================
+# TEST MANAGEMENT APIs - FIXED FOR YOUR SCHEMA
+# ===========================================
+
 @admin_bp.route("/admin/tests")
 def get_tests():
-    """Get all tests"""
+    """Get all tests - FIXED VERSION WITH CORRECT COLUMN NAMES"""
     if session.get("role") != "Admin":
         return jsonify({'success': False, 'message': 'Unauthorized'})
     
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT TestId, TestName, Category, Price, NormalRange, ReportingTime FROM Tests WHERE IsActive = 1 ORDER BY TestId")
+        cursor.execute("""
+            SELECT 
+                TestId, 
+                TestName, 
+                Category, 
+                Price, 
+                ReportingTime,
+                Range_Text,
+                SampleType,
+                Male_Range_Min,
+                Male_Range_Max,
+                Female_Range_Min,
+                Female_Range_Max,
+                Range_Unit,
+                Interpretation_Low,
+                Interpretation_Normal,
+                Interpretation_High,
+                Sample_Type,
+                Methodology,
+                Turnaround_Time,
+                Department
+            FROM Tests 
+            WHERE IsActive = 1 
+            ORDER BY TestId
+        """)
         tests = cursor.fetchall()
         
         tests_list = []
@@ -685,12 +717,26 @@ def get_tests():
                 'TestName': test[1],
                 'Category': test[2],
                 'Price': float(test[3]),
-                'NormalRange': test[4],
-                'ReportingTime': test[5]
+                'ReportingTime': test[4],
+                'NormalRange': test[5],  # This is Range_Text in database
+                'SampleType': test[6],
+                'Male_Range_Min': float(test[7]) if test[7] else None,
+                'Male_Range_Max': float(test[8]) if test[8] else None,
+                'Female_Range_Min': float(test[9]) if test[9] else None,
+                'Female_Range_Max': float(test[10]) if test[10] else None,
+                'Range_Unit': test[11],
+                'Interpretation_Low': test[12],
+                'Interpretation_Normal': test[13],
+                'Interpretation_High': test[14],
+                'Sample_Type': test[15],
+                'Methodology': test[16],
+                'Turnaround_Time': test[17],
+                'Department': test[18]
             })
         
         return jsonify(tests_list)
     except Exception as e:
+        print(f"Error getting tests: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
     finally:
         cursor.close()
@@ -698,7 +744,7 @@ def get_tests():
 
 @admin_bp.route("/admin/tests/add", methods=["POST"])
 def add_test():
-    """Add new test"""
+    """Add new test - UPDATED FOR YOUR SCHEMA"""
     if session.get("role") != "Admin":
         return jsonify({'success': False, 'message': 'Unauthorized'})
     
@@ -707,15 +753,55 @@ def add_test():
     cursor = conn.cursor()
     
     try:
-        cursor.execute(
-            "INSERT INTO Tests (TestName, Price, Category, NormalRange, ReportingTime) VALUES (?, ?, ?, ?, ?)",
-            (data['test_name'], data['price'], data.get('category'), data.get('normal_range'), data.get('reporting_time'))
-        )
+        cursor.execute("""
+            INSERT INTO Tests (
+                TestName, 
+                Price, 
+                Category, 
+                Range_Text,
+                ReportingTime,
+                SampleType,
+                Male_Range_Min,
+                Male_Range_Max,
+                Female_Range_Min,
+                Female_Range_Max,
+                Range_Unit,
+                Interpretation_Low,
+                Interpretation_Normal,
+                Interpretation_High,
+                Sample_Type,
+                Methodology,
+                Turnaround_Time,
+                Department,
+                IsActive,
+                CreatedAt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, GETDATE())
+        """, (
+            data['test_name'],
+            data['price'],
+            data.get('category'),
+            data.get('normal_range'),  # This goes to Range_Text
+            data.get('reporting_time'),
+            data.get('sample_type'),
+            data.get('male_range_min'),
+            data.get('male_range_max'),
+            data.get('female_range_min'),
+            data.get('female_range_max'),
+            data.get('range_unit'),
+            data.get('interpretation_low'),
+            data.get('interpretation_normal'),
+            data.get('interpretation_high'),
+            data.get('sample_type'),
+            data.get('methodology'),
+            data.get('turnaround_time'),
+            data.get('department')
+        ))
         conn.commit()
         
         return jsonify({'success': True, 'message': 'Test added successfully'})
     except Exception as e:
         conn.rollback()
+        print(f"Error adding test: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
     finally:
         cursor.close()
@@ -723,7 +809,7 @@ def add_test():
 
 @admin_bp.route("/admin/tests/update/<int:test_id>", methods=["PUT"])
 def update_test(test_id):
-    """Update test"""
+    """Update test - UPDATED FOR YOUR SCHEMA"""
     if session.get("role") != "Admin":
         return jsonify({'success': False, 'message': 'Unauthorized'})
     
@@ -732,15 +818,54 @@ def update_test(test_id):
     cursor = conn.cursor()
     
     try:
-        cursor.execute(
-            "UPDATE Tests SET TestName = ?, Price = ?, Category = ?, NormalRange = ?, ReportingTime = ? WHERE TestId = ?",
-            (data['test_name'], data['price'], data.get('category'), data.get('normal_range'), data.get('reporting_time'), test_id)
-        )
+        cursor.execute("""
+            UPDATE Tests SET 
+                TestName = ?, 
+                Price = ?, 
+                Category = ?, 
+                Range_Text = ?,
+                ReportingTime = ?,
+                SampleType = ?,
+                Male_Range_Min = ?,
+                Male_Range_Max = ?,
+                Female_Range_Min = ?,
+                Female_Range_Max = ?,
+                Range_Unit = ?,
+                Interpretation_Low = ?,
+                Interpretation_Normal = ?,
+                Interpretation_High = ?,
+                Sample_Type = ?,
+                Methodology = ?,
+                Turnaround_Time = ?,
+                Department = ?
+            WHERE TestId = ?
+        """, (
+            data['test_name'],
+            data['price'],
+            data.get('category'),
+            data.get('normal_range'),  # This goes to Range_Text
+            data.get('reporting_time'),
+            data.get('sample_type'),
+            data.get('male_range_min'),
+            data.get('male_range_max'),
+            data.get('female_range_min'),
+            data.get('female_range_max'),
+            data.get('range_unit'),
+            data.get('interpretation_low'),
+            data.get('interpretation_normal'),
+            data.get('interpretation_high'),
+            data.get('sample_type'),
+            data.get('methodology'),
+            data.get('turnaround_time'),
+            data.get('department'),
+            test_id
+        ))
         conn.commit()
         
         return jsonify({'success': True, 'message': 'Test updated successfully'})
     except Exception as e:
         conn.rollback()
+        print(f"Error updating test: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
     finally:
         cursor.close()
