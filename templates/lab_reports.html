@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Citi Lab – Test Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+body{background:#f4f6f8;padding:20px}
+.card{border-radius:10px;box-shadow:0 0 15px rgba(0,0,0,.1)}
+.lab-header{text-align:center;border-bottom:3px solid #008970;margin-bottom:15px}
+.lab-header h4{margin:0;color:#008970}
+.lab-header small{color:#444}
+.table th{background:#008970;color:#fff}
+.btn-main{background:#008970;color:#fff}
+.pdf-header{text-align:center;border-bottom:2px solid #008970;margin-bottom:20px}
+.pdf-header h4{margin:0;color:#008970}
+.loading-spinner{border:3px solid #f3f3f3;border-top:3px solid #008970;border-radius:50%;width:30px;height:30px;animation:spin 1s linear infinite;margin:20px auto}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.test-param{margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:5px}
+.param-row{margin-bottom:5px}
+.range-input{width:100px;display:inline-block;margin:0 5px}
+.unit-input{width:80px;display:inline-block;margin:0 5px}
+.badge-custom{background:#008970;cursor:pointer}
+.auto-generate-section{background:#e6ffe6;padding:15px;border-radius:10px;margin-top:20px}
+.form-field{transition:all 0.3s ease}
+.form-field:focus{border-color:#008970;box-shadow:0 0 0 0.2rem rgba(0,137,112,0.25)}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<div class="card p-4">
+
+<!-- ===== LAB HEADER ===== -->
+<div class="lab-header">
+<h4>CITI LAB & DIAGNOSTIC CENTRE</h4>
+<small>Opposite CMH Muzaffarabad AJK</small><br>
+<small>Ph: 05822-447698 | Cell: 0301-5225117</small>
+</div>
+
+<!-- ===== PATIENT INFO ===== -->
+<div class="row g-3 mb-3">
+<div class="col-md-4">
+    <input id="pName" name="patient_name" class="form-control form-field" placeholder="Patient Name" required autocomplete="name">
+</div>
+<div class="col-md-2">
+    <input id="pAge" name="patient_age" type="number" class="form-control form-field" placeholder="Age" min="1" max="120" required autocomplete="off">
+</div>
+<div class="col-md-2">
+    <select id="pGender" name="patient_gender" class="form-select form-field" required autocomplete="sex">
+        <option value="">Gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+    </select>
+</div>
+<div class="col-md-4">
+    <input id="pMR" name="patient_mr" class="form-control form-field" placeholder="MR No" autocomplete="off">
+</div>
+<div class="col-md-6">
+    <input id="pDoctor" name="referred_doctor" class="form-control form-field" placeholder="Doctor" required autocomplete="organization">
+</div>
+<div class="col-md-6">
+    <input id="pDate" name="report_date" type="date" class="form-control form-field" autocomplete="off">
+</div>
+</div>
+
+<hr>
+
+<!-- ===== TEST SELECTION ===== -->
+<div class="row mb-3">
+    <div class="col-12">
+        <label class="form-label"><strong>Search Tests (Type H for Hemoglobin etc):</strong></label>
+        <div id="testsLoading" class="loading-spinner" style="display:none;"></div>
+        <select id="testsSelect" name="tests_selection" class="form-select select2-multiple" multiple="multiple" style="width:100%"></select>
+        <small class="text-muted">Type to search. Select multiple tests.</small>
+        <div id="testsError" class="alert alert-danger mt-2" style="display:none;"></div>
+    </div>
+</div>
+
+<!-- ===== ADD TESTS BUTTON ===== -->
+<div class="mb-3">
+    <button class="btn btn-success" onclick="addSelectedTests()">➕ Add Selected Tests</button>
+    <button class="btn btn-info" onclick="showCustomTestModal()">🔧 Add Custom Test</button>
+    <button class="btn btn-warning float-end" onclick="clearAllTests()">🗑️ Clear All</button>
+</div>
+
+<!-- ===== TEST PARAMETERS CONTAINER ===== -->
+<div id="testParametersContainer">
+    <!-- Test parameters will be added here dynamically -->
+</div>
+
+<!-- ===== AUTO GENERATE SECTION ===== -->
+<div id="autoGenerateSection" class="auto-generate-section" style="display:none;">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h5>✅ All Parameters Added!</h5>
+            <p class="mb-0">All test parameters have been filled. Ready to generate report.</p>
+            <small class="text-muted">Patient info will be used from above form.</small>
+        </div>
+        <div class="col-md-4 text-end">
+            <button id="autoGenerateBtn" class="btn btn-main px-4" onclick="autoGeneratePDF()">
+                🚀 Auto-Generate Report
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== NOTES ===== -->
+<textarea id="pNotes" name="remarks" class="form-control form-field mt-3" placeholder="Remarks / Interpretation" rows="3" autocomplete="off"></textarea>
+
+<!-- ===== ACTION BUTTONS ===== -->
+<div class="text-center mt-4">
+    <button id="generatePdfBtn" class="btn btn-main px-4 me-2" onclick="generatePDF()">📄 Generate PDF Report</button>
+    <button id="previewBtn" class="btn btn-secondary px-4" onclick="previewReport()">👁️ Preview</button>
+</div>
+
+</div>
+</div>
+
+<!-- ================= CUSTOM TEST MODAL ================= -->
+<div class="modal fade" id="customTestModal" tabindex="-1">
+<div class="modal-dialog modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Add Custom Test with Parameters</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <label>Test Name:</label>
+                <input type="text" id="customTestName" name="custom_test_name" class="form-control form-field" placeholder="e.g., Lipid Profile, LFT" autocomplete="off">
+            </div>
+            <div class="mb-3">
+                <label>Test Parameters:</label>
+                <div id="customParamsContainer">
+                    <div class="param-row mb-2">
+                        <input type="text" name="param_name[]" class="form-control d-inline-block w-25" placeholder="Parameter" value="Cholesterol" autocomplete="off">
+                        <input type="text" name="param_min[]" class="form-control d-inline-block w-15 range-input" placeholder="Min" value="150" autocomplete="off">
+                        <span>to</span>
+                        <input type="text" name="param_max[]" class="form-control d-inline-block w-15 range-input" placeholder="Max" value="200" autocomplete="off">
+                        <input type="text" name="param_unit[]" class="form-control d-inline-block w-15 unit-input" placeholder="Unit" value="mg/dL" autocomplete="off">
+                        <button class="btn btn-sm btn-danger" onclick="removeParam(this)">×</button>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-secondary" onclick="addCustomParam()">+ Add Parameter</button>
+            </div>
+            <div class="mb-3">
+                <label>Save for future use:</label>
+                <input type="checkbox" id="saveCustomTest" name="save_custom_test" checked autocomplete="off">
+                <small class="text-muted"> (Will appear in dropdown next time)</small>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-main" onclick="addCustomTest()">Add Test</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ================= PDF CONTENT ================= -->
+<div id="pdfContent" style="display:none; padding: 20px; background: white;">
+<div class="pdf-header">
+    <h4>CITI LAB & DIAGNOSTIC CENTRE</h4>
+    <p><b>LAB REPORT</b></p>
+    <small>Opposite CMH Muzaffarabad AJK | Ph: 05822-447698 | Cell: 0301-5225117</small>
+</div>
+
+<hr>
+<div class="row mb-3">
+    <div class="col-md-6">
+        <p><b>Patient Name:</b> <span id="pdfName"></span></p>
+        <p><b>MR No:</b> <span id="pdfMR"></span></p>
+        <p><b>Referred By:</b> <span id="pdfDoctor"></span></p>
+    </div>
+    <div class="col-md-6 text-end">
+        <p><b>Age / Gender:</b> <span id="pdfAgeGender"></span></p>
+        <p><b>Date:</b> <span id="pdfDate"></span></p>
+        <p><b>Report ID:</b> <span id="pdfReportId"></span></p>
+    </div>
+</div>
+<hr>
+<div id="pdfTestContent">
+    <!-- Test content will be inserted here -->
+</div>
+<div class="mt-4">
+    <p><b>Remarks:</b> <span id="pdfNotes"></span></p>
+</div>
+<div class="mt-5 pt-5 border-top">
+    <div class="row">
+        <div class="col-md-6 text-center">
+            <p>________________________</p>
+            <p><b>Lab Technician</b></p>
+        </div>
+        <div class="col-md-6 text-center">
+            <p>________________________</p>
+            <p><b>Pathologist</b></p>
+        </div>
+    </div>
+    <div class="text-center mt-3">
+        <p class="text-muted"><i>This is a computer generated report. No signature required.</i></p>
+    </div>
+</div>
+</div>
+
+<!-- ================= PREVIEW MODAL ================= -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+<div class="modal-dialog modal-xl">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Report Preview</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="previewBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-main" onclick="generatePDF()">Download PDF</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+let allTests = []; // Database tests
+let customTests = []; // User-created tests (saved in localStorage)
+let selectedTests = []; // Currently selected tests
+let totalParameters = 0;
+let filledParameters = 0;
+
+// ===== INITIALIZE =====
+$(document).ready(function() {
+    // Initialize Select2
+    $('#testsSelect').select2({
+        placeholder: "Type H for Hemoglobin, L for LFT etc...",
+        allowClear: true,
+        width: '100%',
+        closeOnSelect: false,
+        minimumInputLength: 1
+    });
+    
+    // Load database tests
+    loadDatabaseTests();
+    
+    // Load custom tests from localStorage
+    loadCustomTests();
+    
+    // Set today's date
+    document.getElementById("pDate").value = new Date().toISOString().split('T')[0];
+    
+    // Monitor form inputs for auto-generate
+    monitorFormCompletion();
+    
+    // Set autocomplete attributes for better UX
+    $('input, select').attr('autocomplete', function() {
+        const id = $(this).attr('id');
+        if (id === 'pName') return 'name';
+        if (id === 'pAge') return 'off';
+        if (id === 'pGender') return 'sex';
+        if (id === 'pDoctor') return 'organization';
+        return 'off';
+    });
+});
+
+// ===== MONITOR FORM COMPLETION =====
+function monitorFormCompletion() {
+    // Check patient form completion
+    const patientInputs = ['#pName', '#pAge', '#pGender', '#pDoctor'];
+    patientInputs.forEach(selector => {
+        $(selector).on('input change', checkAutoGenerateConditions);
+    });
+    
+    // Monitor test parameter inputs
+    $(document).on('input', '.result-input, .range-input', checkAutoGenerateConditions);
+}
+
+// ===== CHECK AUTO-GENERATE CONDITIONS =====
+function checkAutoGenerateConditions() {
+    // Check if patient info is complete
+    const patientComplete = 
+        $('#pName').val().trim() !== '' &&
+        $('#pAge').val() !== '' &&
+        $('#pGender').val() !== '' &&
+        $('#pDoctor').val().trim() !== '';
+    
+    if (!patientComplete) {
+        $('#autoGenerateSection').hide();
+        return;
+    }
+    
+    // Count total parameters and filled ones
+    totalParameters = $('.test-card').length;
+    filledParameters = 0;
+    
+    $('.test-card').each(function() {
+        const hasResult = $(this).find('.result-input').filter(function() {
+            return $(this).val().trim() !== '';
+        }).length > 0;
+        
+        const hasRange = $(this).find('.range-input').filter(function() {
+            return $(this).val().trim() !== '';
+        }).length > 0;
+        
+        if (hasResult && hasRange) {
+            filledParameters++;
+        }
+    });
+    
+    // Show auto-generate section if all parameters are filled
+    if (totalParameters > 0 && filledParameters === totalParameters) {
+        $('#autoGenerateSection').show();
+        $('#autoGenerateSection h5').html(`✅ All ${filledParameters} Parameters Filled!`);
+        $('#autoGenerateSection p').text('Ready to generate report automatically.');
+        $('#autoGenerateBtn').prop('disabled', false);
+    } else if (totalParameters > 0) {
+        $('#autoGenerateSection').show();
+        $('#autoGenerateSection h5').html(`📊 ${filledParameters}/${totalParameters} Parameters Filled`);
+        $('#autoGenerateSection p').text('Complete all parameters to auto-generate report.');
+        $('#autoGenerateBtn').prop('disabled', true);
+    } else {
+        $('#autoGenerateSection').hide();
+    }
+}
+
+// ===== AUTO GENERATE PDF =====
+function autoGeneratePDF() {
+    if (!validateForm()) {
+        alert("Please complete all required fields first!");
+        return;
+    }
+    
+    // Show loading
+    const btn = $('#autoGenerateBtn');
+    const originalText = btn.html();
+    btn.html('<span class="spinner-border spinner-border-sm"></span> Generating...');
+    btn.prop('disabled', true);
+    
+    // Generate PDF after a short delay
+    setTimeout(() => {
+        generatePDF();
+        btn.html(originalText);
+        btn.prop('disabled', false);
+    }, 500);
+}
+
+// ===== LOAD DATABASE TESTS =====
+async function loadDatabaseTests() {
+    try {
+        document.getElementById('testsLoading').style.display = 'block';
+        
+        const endpoints = ['/patients/api/tests', '/api/tests'];
+        let response = null;
+        
+        for (const endpoint of endpoints) {
+            try {
+                response = await fetch(endpoint);
+                if (response.ok) break;
+            } catch (e) {
+                console.log(`Failed ${endpoint}:`, e.message);
+            }
+        }
+        
+        if (response && response.ok) {
+            allTests = await response.json();
+            updateTestDropdown();
+        }
+    } catch (error) {
+        console.error('Error loading tests:', error);
+        document.getElementById('testsError').innerHTML = 
+            `Error: ${error.message}. Using sample data.`;
+        document.getElementById('testsError').style.display = 'block';
+        
+        // Use sample data if server fails
+        allTests = [
+            {TestId: 1, TestName: "Hemoglobin (Hb)", Price: 300, Range_Text: "Male: 13.5-17.5, Female: 12.0-15.5"},
+            {TestId: 2, TestName: "Complete Blood Count (CBC)", Price: 500},
+            {TestId: 3, TestName: "Blood Glucose Fasting", Price: 200, Range_Text: "70-100 mg/dL"},
+            {TestId: 4, TestName: "Lipid Profile", Price: 800},
+            {TestId: 5, TestName: "Liver Function Test (LFT)", Price: 1000},
+            {TestId: 6, TestName: "25-OH Vitamin D", Price: 2500, Range_Text: "<10: Deficiency, 10-30: Insufficiency, 30-100: Sufficiency"}
+        ];
+        updateTestDropdown();
+    } finally {
+        document.getElementById('testsLoading').style.display = 'none';
+    }
+}
+
+// ===== LOAD CUSTOM TESTS =====
+function loadCustomTests() {
+    const saved = localStorage.getItem('customTests');
+    if (saved) {
+        customTests = JSON.parse(saved);
+        updateTestDropdown();
+    }
+}
+
+// ===== SAVE CUSTOM TESTS =====
+function saveCustomTests() {
+    localStorage.setItem('customTests', JSON.stringify(customTests));
+    updateTestDropdown();
+}
+
+// ===== UPDATE TEST DROPDOWN =====
+function updateTestDropdown() {
+    $('#testsSelect').empty();
+    
+    // Add database tests
+    allTests.forEach(test => {
+        const text = `${test.TestName} - Rs. ${(test.Price || 0).toFixed(2)}`;
+        const option = new Option(text, `db_${test.TestId}`, false, false);
+        $('#testsSelect').append(option);
+    });
+    
+    // Add custom tests
+    customTests.forEach((test, index) => {
+        const text = `${test.name} (Custom)`;
+        const option = new Option(text, `custom_${index}`, false, false);
+        $('#testsSelect').append(option);
+    });
+    
+    $('#testsSelect').trigger('change');
+}
+
+// ===== ADD SELECTED TESTS =====
+function addSelectedTests() {
+    const selected = $('#testsSelect').val();
+    if (!selected || selected.length === 0) {
+        alert("Please select tests first!");
+        return;
+    }
+    
+    selected.forEach(testId => {
+        if (testId.startsWith('db_')) {
+            // Database test
+            const id = parseInt(testId.replace('db_', ''));
+            const test = allTests.find(t => t.TestId === id);
+            if (test && !selectedTests.find(t => t.id === testId)) {
+                addTestToContainer(testId, test.TestName, test.Range_Text, test.Price);
+                selectedTests.push({id: testId, name: test.TestName, type: 'db'});
+            }
+        } else if (testId.startsWith('custom_')) {
+            // Custom test
+            const index = parseInt(testId.replace('custom_', ''));
+            const test = customTests[index];
+            if (test && !selectedTests.find(t => t.id === testId)) {
+                addCustomTestToContainer(testId, test);
+                selectedTests.push({id: testId, name: test.name, type: 'custom'});
+            }
+        }
+    });
+    
+    $('#testsSelect').val(null).trigger('change');
+    checkAutoGenerateConditions();
+}
+
+// ===== ADD DATABASE TEST TO CONTAINER =====
+function addTestToContainer(testId, testName, rangeText, price) {
+    const container = document.getElementById('testParametersContainer');
+    const paramCount = $(container).find('.test-card').length + 1;
+    
+    const testHTML = `
+        <div class="card mb-3 test-card" data-test-id="${testId}">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <strong>${testName}</strong>
+                <div>
+                    <span class="badge bg-success">Rs. ${(price || 0).toFixed(2)}</span>
+                    <button class="btn btn-sm btn-danger" onclick="removeTest('${testId}')">×</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Parameter</strong></div>
+                    <div class="col-md-2"><strong>Result</strong></div>
+                    <div class="col-md-3"><strong>Reference Range</strong></div>
+                    <div class="col-md-2"><strong>Unit</strong></div>
+                    <div class="col-md-1"><strong>Status</strong></div>
+                </div>
+                <div class="test-param">
+                    <div class="param-row">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-field" value="${testName}" readonly
+                                       id="param_name_${paramCount}" name="test_${paramCount}_name">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-field result-input" 
+                                       placeholder="Value" oninput="validateResult(this)"
+                                       id="param_result_${paramCount}" name="test_${paramCount}_result" autocomplete="off">
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-field range-input" 
+                                           value="${rangeText || ''}" 
+                                           placeholder="e.g., 10-20 or <10: Deficiency"
+                                           oninput="saveRangeToLocal('${testId}', this.value)"
+                                           id="param_range_${paramCount}" name="test_${paramCount}_range" autocomplete="off">
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            onclick="showRangeHelper(this)">📝</button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-field unit-input" 
+                                       value="${getUnitFromRange(rangeText)}" 
+                                       placeholder="Unit"
+                                       id="param_unit_${paramCount}" name="test_${paramCount}_unit" autocomplete="off">
+                            </div>
+                            <div class="col-md-1">
+                                <span class="badge bg-secondary status-badge">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-primary mt-2" onclick="addSubParameter(this, '${testId}', ${paramCount})">
+                    + Add Sub-parameter
+                </button>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', testHTML);
+    
+    // Load saved ranges from localStorage
+    loadSavedRanges(testId);
+    
+    // Add event listeners for auto-check
+    $(container).find('.result-input, .range-input').on('input', checkAutoGenerateConditions);
+}
+
+// ===== ADD CUSTOM TEST TO CONTAINER =====
+function addCustomTestToContainer(testId, test) {
+    const container = document.getElementById('testParametersContainer');
+    const paramCount = $(container).find('.test-card').length + 1;
+    
+    const testHTML = `
+        <div class="card mb-3 test-card" data-test-id="${testId}">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <strong>${test.name} (Custom)</strong>
+                <button class="btn btn-sm btn-light" onclick="removeTest('${testId}')">×</button>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Parameter</strong></div>
+                    <div class="col-md-2"><strong>Result</strong></div>
+                    <div class="col-md-3"><strong>Reference Range</strong></div>
+                    <div class="col-md-2"><strong>Unit</strong></div>
+                    <div class="col-md-1"><strong>Status</strong></div>
+                </div>
+                <div id="params-${testId}">
+                    <!-- Parameters will be added here -->
+                </div>
+                <button class="btn btn-sm btn-outline-primary mt-2" onclick="addSubParameter(this, '${testId}', ${paramCount})">
+                    + Add Parameter
+                </button>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', testHTML);
+    
+    // Add parameters
+    const paramsContainer = document.getElementById(`params-${testId}`);
+    if (test.parameters && test.parameters.length > 0) {
+        test.parameters.forEach((param, index) => {
+            addParameterRow(paramsContainer, testId, param, paramCount + index);
+        });
+    } else {
+        addParameterRow(paramsContainer, testId, null, paramCount);
+    }
+    
+    // Load saved ranges
+    loadSavedRanges(testId);
+    
+    // Add event listeners
+    $(container).find('.result-input, .range-input').on('input', checkAutoGenerateConditions);
+}
+
+// ===== ADD PARAMETER ROW =====
+function addParameterRow(container, testId, param = null, rowNumber) {
+    const rowId = `param_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const paramHTML = `
+        <div class="test-param" id="${rowId}">
+            <div class="param-row">
+                <div class="row">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control form-field param-name" 
+                               value="${param ? param.name : ''}" 
+                               placeholder="Parameter name"
+                               id="param_name_${rowNumber}" name="test_${rowNumber}_name" autocomplete="off">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-field result-input" 
+                               placeholder="Value" oninput="validateResult(this)"
+                               id="param_result_${rowNumber}" name="test_${rowNumber}_result" autocomplete="off">
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control form-field range-input" 
+                                   value="${param ? (param.range || '') : ''}" 
+                                   placeholder="e.g., 10-20"
+                                   oninput="saveRangeToLocal('${testId}_${param ? param.name : 'custom'}', this.value)"
+                                   id="param_range_${rowNumber}" name="test_${rowNumber}_range" autocomplete="off">
+                            <button class="btn btn-sm btn-outline-secondary" 
+                                    onclick="showRangeHelper(this)">📝</button>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control form-field unit-input" 
+                               value="${param ? (param.unit || '') : ''}" 
+                               placeholder="Unit"
+                               id="param_unit_${rowNumber}" name="test_${rowNumber}_unit" autocomplete="off">
+                    </div>
+                    <div class="col-md-1">
+                        <span class="badge bg-secondary status-badge">-</span>
+                        <button class="btn btn-sm btn-danger" onclick="removeParamRow('${rowId}')">×</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (container) {
+        container.insertAdjacentHTML('beforeend', paramHTML);
+        
+        // Add event listeners
+        $(`#${rowId} .result-input, #${rowId} .range-input`).on('input', checkAutoGenerateConditions);
+    }
+}
+
+// ===== ADD SUB PARAMETER =====
+function addSubParameter(button, testId, paramCount) {
+    const card = button.closest('.test-card');
+    const body = card.querySelector('.card-body');
+    let paramsContainer = body.querySelector('.test-params-container');
+    
+    if (!paramsContainer) {
+        // Create container for parameters
+        const existingHTML = body.innerHTML;
+        body.innerHTML = `
+            <div class="row mb-2">
+                <div class="col-md-4"><strong>Parameter</strong></div>
+                <div class="col-md-2"><strong>Result</strong></div>
+                <div class="col-md-3"><strong>Reference Range</strong></div>
+                <div class="col-md-2"><strong>Unit</strong></div>
+                <div class="col-md-1"><strong>Status</strong></div>
+            </div>
+            <div class="test-params-container"></div>
+            <button class="btn btn-sm btn-outline-primary mt-2" onclick="addSubParameter(this, '${testId}', ${paramCount})">
+                + Add Parameter
+            </button>
+        `;
+        paramsContainer = body.querySelector('.test-params-container');
+    }
+    
+    const nextRowNumber = $(paramsContainer).find('.test-param').length + paramCount;
+    addParameterRow(paramsContainer, testId, null, nextRowNumber);
+}
+
+// ===== SHOW CUSTOM TEST MODAL =====
+function showCustomTestModal() {
+    $('#customTestModal').modal('show');
+}
+
+// ===== ADD CUSTOM PARAMETER =====
+function addCustomParam() {
+    const container = document.getElementById('customParamsContainer');
+    const paramCount = $(container).find('.param-row').length + 1;
+    
+    const html = `
+        <div class="param-row mb-2">
+            <input type="text" name="param_name[]" class="form-control d-inline-block w-25 form-field" 
+                   placeholder="Parameter" autocomplete="off">
+            <input type="text" name="param_min[]" class="form-control d-inline-block w-15 range-input form-field" 
+                   placeholder="Min" autocomplete="off">
+            <span>to</span>
+            <input type="text" name="param_max[]" class="form-control d-inline-block w-15 range-input form-field" 
+                   placeholder="Max" autocomplete="off">
+            <input type="text" name="param_unit[]" class="form-control d-inline-block w-15 unit-input form-field" 
+                   placeholder="Unit" autocomplete="off">
+            <button class="btn btn-sm btn-danger" onclick="removeParam(this)">×</button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+// ===== ADD CUSTOM TEST =====
+function addCustomTest() {
+    const testName = document.getElementById('customTestName').value.trim();
+    if (!testName) {
+        alert("Please enter test name!");
+        return;
+    }
+    
+    const paramRows = document.querySelectorAll('#customParamsContainer .param-row');
+    const parameters = [];
+    
+    paramRows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0].value.trim()) {
+            parameters.push({
+                name: inputs[0].value,
+                min: inputs[1].value,
+                max: inputs[2].value,
+                unit: inputs[3].value,
+                range: `${inputs[1].value}-${inputs[2].value} ${inputs[3].value}`
+            });
+        }
+    });
+    
+    if (parameters.length === 0) {
+        alert("Please add at least one parameter!");
+        return;
+    }
+    
+    const newTest = {
+        name: testName,
+        parameters: parameters,
+        type: 'custom'
+    };
+    
+    // Add to custom tests
+    customTests.push(newTest);
+    
+    // Save to localStorage
+    if (document.getElementById('saveCustomTest').checked) {
+        saveCustomTests();
+    }
+    
+    // Add to container
+    const testId = `custom_${customTests.length - 1}`;
+    addCustomTestToContainer(testId, newTest);
+    selectedTests.push({id: testId, name: testName, type: 'custom'});
+    
+    // Update dropdown
+    updateTestDropdown();
+    
+    // Close modal
+    $('#customTestModal').modal('hide');
+    
+    // Reset form
+    document.getElementById('customTestName').value = '';
+    document.getElementById('customParamsContainer').innerHTML = `
+        <div class="param-row mb-2">
+            <input type="text" name="param_name[]" class="form-control d-inline-block w-25 form-field" 
+                   placeholder="Parameter" autocomplete="off">
+            <input type="text" name="param_min[]" class="form-control d-inline-block w-15 range-input form-field" 
+                   placeholder="Min" autocomplete="off">
+            <span>to</span>
+            <input type="text" name="param_max[]" class="form-control d-inline-block w-15 range-input form-field" 
+                   placeholder="Max" autocomplete="off">
+            <input type="text" name="param_unit[]" class="form-control d-inline-block w-15 unit-input form-field" 
+                   placeholder="Unit" autocomplete="off">
+            <button class="btn btn-sm btn-danger" onclick="removeParam(this)">×</button>
+        </div>
+    `;
+    
+    checkAutoGenerateConditions();
+}
+
+// ===== SAVE RANGE TO LOCALSTORAGE =====
+function saveRangeToLocal(testKey, rangeValue) {
+    if (!rangeValue.trim()) return;
+    
+    const savedRanges = JSON.parse(localStorage.getItem('savedRanges') || '{}');
+    savedRanges[testKey] = rangeValue;
+    localStorage.setItem('savedRanges', JSON.stringify(savedRanges));
+    
+    checkAutoGenerateConditions();
+}
+
+// ===== LOAD SAVED RANGES =====
+function loadSavedRanges(testId) {
+    const savedRanges = JSON.parse(localStorage.getItem('savedRanges') || '{}');
+    
+    const testCard = document.querySelector(`[data-test-id="${testId}"]`);
+    if (testCard) {
+        const rangeInputs = testCard.querySelectorAll('.range-input');
+        rangeInputs.forEach(input => {
+            const paramName = input.closest('.param-row').querySelector('.param-name');
+            const key = paramName ? `${testId}_${paramName.value}` : testId;
+            
+            if (savedRanges[key]) {
+                input.value = savedRanges[key];
+            }
+        });
+    }
+}
+
+// ===== VALIDATE RESULT =====
+function validateResult(input) {
+    const value = parseFloat(input.value);
+    if (isNaN(value)) {
+        input.style.backgroundColor = '';
+        updateStatusBadge(input, 'secondary', '-');
+        checkAutoGenerateConditions();
+        return;
+    }
+    
+    const row = input.closest('.param-row');
+    const rangeInput = row.querySelector('.range-input');
+    const rangeText = rangeInput.value;
+    
+    if (!rangeText) {
+        updateStatusBadge(input, 'warning', '?');
+        checkAutoGenerateConditions();
+        return;
+    }
+    
+    let status = 'secondary';
+    let symbol = '-';
+    
+    if (rangeText.includes('-')) {
+        const parts = rangeText.split('-').map(p => parseFloat(p.replace(/[^0-9.]/g, '')));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            if (value < parts[0]) {
+                input.style.backgroundColor = '#ffe6e6';
+                status = 'danger';
+                symbol = '↓ Low';
+            } else if (value > parts[1]) {
+                input.style.backgroundColor = '#fff3cd';
+                status = 'warning';
+                symbol = '↑ High';
+            } else {
+                input.style.backgroundColor = '#e6ffe6';
+                status = 'success';
+                symbol = '✓ Normal';
+            }
+        }
+    } else if (rangeText.includes('<') || rangeText.includes('>')) {
+        if (rangeText.includes('<')) {
+            const threshold = parseFloat(rangeText.match(/<(\d+)/)?.[1]);
+            if (!isNaN(threshold)) {
+                if (value < threshold) {
+                    input.style.backgroundColor = '#ffe6e6';
+                    status = 'danger';
+                    symbol = '↓ Low';
+                } else {
+                    input.style.backgroundColor = '#e6ffe6';
+                    status = 'success';
+                    symbol = '✓ Normal';
+                }
+            }
+        } else if (rangeText.includes('>')) {
+            const threshold = parseFloat(rangeText.match(/>(\d+)/)?.[1]);
+            if (!isNaN(threshold)) {
+                if (value > threshold) {
+                    input.style.backgroundColor = '#fff3cd';
+                    status = 'warning';
+                    symbol = '↑ High';
+                } else {
+                    input.style.backgroundColor = '#e6ffe6';
+                    status = 'success';
+                    symbol = '✓ Normal';
+                }
+            }
+        }
+    }
+    
+    updateStatusBadge(input, status, symbol);
+    checkAutoGenerateConditions();
+}
+
+// ===== UPDATE STATUS BADGE =====
+function updateStatusBadge(input, color, text) {
+    const badge = input.closest('.param-row').querySelector('.status-badge');
+    if (badge) {
+        badge.className = `badge bg-${color} status-badge`;
+        badge.textContent = text;
+    }
+}
+
+// ===== SHOW RANGE HELPER =====
+function showRangeHelper(button) {
+    const input = button.previousElementSibling;
+    const examples = [
+        "10-20 mg/dL",
+        "<10: Deficiency, 10-30: Insufficiency, 30-100: Sufficiency",
+        "Male: 13.5-17.5, Female: 12.0-15.5 g/dL",
+        "70-100 (Fasting), <140 (Random)",
+        "Negative: <1.0, Positive: >1.0"
+    ];
+    
+    const example = examples[Math.floor(Math.random() * examples.length)];
+    input.placeholder = `e.g., ${example}`;
+    input.focus();
+}
+
+// ===== GET UNIT FROM RANGE =====
+function getUnitFromRange(rangeText) {
+    if (!rangeText) return '';
+    
+    const units = ['mg/dL', 'g/dL', 'U/L', 'mmol/L', 'ng/mL', 'pg/mL'];
+    for (const unit of units) {
+        if (rangeText.includes(unit)) {
+            return unit;
+        }
+    }
+    return '';
+}
+
+// ===== REMOVE FUNCTIONS =====
+function removeParam(button) {
+    button.closest('.param-row').remove();
+}
+
+function removeParamRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) row.remove();
+    checkAutoGenerateConditions();
+}
+
+function removeTest(testId) {
+    const testCard = document.querySelector(`[data-test-id="${testId}"]`);
+    if (testCard) testCard.remove();
+    
+    selectedTests = selectedTests.filter(t => t.id !== testId);
+    checkAutoGenerateConditions();
+}
+
+// ===== GENERATE PDF =====
+function generatePDF() {
+    if (!validateForm()) return;
+    
+    // Fill patient info
+    document.getElementById("pdfName").textContent = document.getElementById("pName").value;
+    document.getElementById("pdfAgeGender").textContent = 
+        `${document.getElementById("pAge").value} / ${document.getElementById("pGender").value}`;
+    document.getElementById("pdfMR").textContent = document.getElementById("pMR").value || "N/A";
+    document.getElementById("pdfDoctor").textContent = document.getElementById("pDoctor").value;
+    document.getElementById("pdfDate").textContent = document.getElementById("pDate").value;
+    document.getElementById("pdfNotes").textContent = document.getElementById("pNotes").value || "None";
+    document.getElementById("pdfReportId").textContent = `RPT-${Date.now().toString().slice(-6)}`;
+    
+    // Generate test content
+    const pdfTestContent = document.getElementById("pdfTestContent");
+    pdfTestContent.innerHTML = "";
+    
+    const testCards = document.querySelectorAll('.test-card');
+    if (testCards.length === 0) {
+        alert("Please add at least one test!");
+        return;
+    }
+    
+    testCards.forEach(card => {
+        const testName = card.querySelector('.card-header strong').textContent;
+        const params = card.querySelectorAll('.test-param');
+        
+        let tableHTML = `
+            <h5 class="mt-4">${testName}</h5>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Result</th>
+                        <th>Reference Range</th>
+                        <th>Unit</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        params.forEach(param => {
+            const row = param.querySelector('.param-row');
+            if (row) {
+                const cells = row.querySelectorAll('input');
+                if (cells.length >= 4) {
+                    const paramName = cells[0]?.value || '';
+                    const result = cells[1]?.value || '';
+                    const range = cells[2]?.value || '';
+                    const unit = cells[3]?.value || '';
+                    const statusBadge = row.querySelector('.status-badge');
+                    const status = statusBadge?.textContent || '-';
+                    
+                    let statusClass = '';
+                    if (status.includes('Low')) statusClass = 'style="color:red"';
+                    else if (status.includes('High')) statusClass = 'style="color:orange"';
+                    else if (status.includes('Normal')) statusClass = 'style="color:green"';
+                    
+                    tableHTML += `
+                        <tr>
+                            <td>${paramName}</td>
+                            <td><strong ${statusClass}>${result}</strong></td>
+                            <td>${range}</td>
+                            <td>${unit}</td>
+                            <td>${status}</td>
+                        </tr>
+                    `;
+                }
+            }
+        });
+        
+        tableHTML += `</tbody></table>`;
+        pdfTestContent.innerHTML += tableHTML;
+    });
+    
+    // Generate PDF
+    const element = document.getElementById("pdfContent");
+    const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `Lab_Report_${document.getElementById("pMR").value || Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    const btn = document.getElementById('generatePdfBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Generating...';
+    btn.disabled = true;
+    
+    html2pdf().set(opt).from(element).save().then(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        alert("PDF generated!");
+    }).catch(error => {
+        console.error("PDF error:", error);
+        alert("Error: " + error.message);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+// ===== PREVIEW REPORT =====
+function previewReport() {
+    if (!validateForm()) return;
+    
+    generatePDF();
+    const previewBody = document.getElementById("previewBody");
+    previewBody.innerHTML = document.getElementById("pdfContent").innerHTML;
+    
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+}
+
+// ===== CLEAR ALL TESTS =====
+function clearAllTests() {
+    if (confirm("Clear all tests?")) {
+        document.getElementById('testParametersContainer').innerHTML = '';
+        selectedTests = [];
+        $('#autoGenerateSection').hide();
+    }
+}
+
+// ===== VALIDATE FORM =====
+function validateForm() {
+    const name = document.getElementById("pName").value.trim();
+    const age = document.getElementById("pAge").value;
+    const gender = document.getElementById("pGender").value;
+    const doctor = document.getElementById("pDoctor").value.trim();
+    
+    if (!name) {
+        alert("Enter patient name!");
+        document.getElementById("pName").focus();
+        return false;
+    }
+    if (!age || age < 1 || age > 120) {
+        alert("Enter valid age!");
+        document.getElementById("pAge").focus();
+        return false;
+    }
+    if (!gender) {
+        alert("Select gender!");
+        document.getElementById("pGender").focus();
+        return false;
+    }
+    if (!doctor) {
+        alert("Enter doctor name!");
+        document.getElementById("pDoctor").focus();
+        return false;
+    }
+    
+    if (document.querySelectorAll('.test-card').length === 0) {
+        alert("Add at least one test!");
+        return false;
+    }
+    
+    const hasResults = document.querySelectorAll('.result-input[value]').length > 0;
+    if (!hasResults) {
+        alert("Enter test results!");
+        return false;
+    }
+    
+    return true;
+}
+</script>
+
+</body>
+</html>

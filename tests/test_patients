@@ -1,0 +1,23 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import pytest
+from flask import Flask
+from routes.patients import patients_bp
+
+@pytest.fixture
+def client():
+    app = Flask(__name__)
+    app.register_blueprint(patients_bp)
+    app.config['TESTING'] = True
+    with app.test_client() as client:
+        yield client
+
+def test_get_patients(client):
+    response = client.get('/patients')
+    assert response.status_code == 200
+
+def test_create_patient_missing_fields(client):
+    response = client.post('/patients', json={})
+    assert response.status_code == 400

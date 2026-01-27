@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Patient Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+
+  <!-- Font Awesome for modern icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* High contrast support */
+    @media (prefers-contrast: high) {
+      .card {
+        border: 2px solid #000000;
+      }
+      body {
+        background: #ffffff;
+      }
+    }
+
+    body {
+      background: linear-gradient(135deg, #008080 0%, #008970 100%);
+      font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
+      padding: 20px;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .card {
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      border: none;
+      background-color: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    }
+
+    /* NEW: Unified header with search and export buttons */
+    .table-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      gap: 15px;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 10;
+      padding: 15px;
+      border-radius: 18px 18px 0 0;
+      background: linear-gradient(90deg, #f8f9fa, #ffffff);
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .table-header h4 {
+      font-weight: 700;
+      background: linear-gradient(90deg, #008080, #008970);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.05);
+      margin: 0;
+    }
+
+    /* NEW: Unified search and export section */
+    .search-export-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    /* NEW: Unified search bar */
+    .unified-search {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+
+    .unified-search .form-control {
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      padding: 8px 12px 8px 40px;
+      outline: none;
+      transition: all 0.2s ease-in-out;
+      background: rgba(255, 255, 255, 0.8);
+      width: 300px;
+    }
+
+    .unified-search .form-control:focus {
+      border-color: #008080;
+      box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+      background: white;
+    }
+
+    .unified-search i {
+      position: absolute;
+      left: 15px;
+      color: #6c757d;
+      z-index: 1;
+    }
+
+    /* NEW: Export buttons aligned with equal spacing */
+    .export-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #868686, #6c757d);
+      border: none;
+      transition: all 0.3s ease;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .btn-secondary:hover {
+      background: linear-gradient(135deg, #6c757d, #545b62);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #006D5B, #008080);
+      border: none;
+      transition: all 0.3s ease;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #008080, #008970);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #008970, #008080);
+      border: none;
+      transition: all 0.3s ease;
+      border-radius: 8box;
+      font-weight: 600;
+    }
+
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #008080, #008970);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #008970, #008080);
+      border: none;
+      transition: all 0.3s ease;
+      border-radius: 8px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background: linear-gradient(135deg, #f8ca82, #16486d);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(255, 216, 155, 0.4);
+    }
+
+    /* NEW: Increased padding inside table headers */
+    table.dataTable thead {
+      background: linear-gradient(135deg, #008080, #008080);
+      color: #fff;
+    }
+
+    table.dataTable thead th {
+      border: none;
+      padding: 16px 12px; /* Increased padding */
+      font-weight: 600;
+    }
+
+    /* NEW: Subtle row hover effect */
+    table.dataTable tbody tr {
+      transition: all 0.2s ease;
+    }
+
+    table.dataTable tbody tr:hover {
+      background-color: rgba(102, 126, 234, 0.08) !important; /* More subtle */
+      transform: none; /* Removed scale effect for cleaner look */
+    }
+
+    /* NEW: Fixed height table container - UPDATED */
+    .table-container {
+      max-height: 500px;
+      overflow-y: auto;
+      border: 1px solid #e9ecef;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    /* Better table styling */
+    #savedTable {
+      margin-bottom: 0;
+      width: 100% !important;
+    }
+
+    #savedTable thead th {
+      position: sticky;
+      top: 0;
+      background: linear-gradient(135deg, #008080, #008080);
+      z-index: 10;
+    }
+
+    #savedTable tbody td {
+      padding: 12px 10px;
+      vertical-align: middle;
+    }
+
+    /* NEW: DataTables scroll wrapper styling */
+    .dataTables_scrollBody {
+      max-height: 400px !important;
+      overflow-y: auto !important;
+    }
+
+    .dataTables_scrollBody::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .dataTables_scrollBody::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .dataTables_scrollBody::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #008080, #008970);
+      border-radius: 10px;
+    }
+
+    .dataTables_scrollBody::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #5a6fd8, #008970);
+    }
+
+    /* Compact action buttons */
+    .compact-actions {
+      display: flex;
+      gap: 4px;
+      flex-wrap: nowrap;
+    }
+
+    .compact-actions .btn {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.7rem;
+      min-width: 28px;
+    }
+
+    /* Better tests column */
+    .tests-cell {
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* No data message styling */
+    .dataTables_empty {
+      text-align: center;
+      padding: 40px !important;
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    /* Make scrollbar only appear when needed */
+    .table-container::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #008080, #008970);
+      border-radius: 10px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #5a6fd8, #008970);
+    }
+
+    /* NEW: Consistent color scheme for filters */
+    .search-filter-section {
+      background: linear-gradient(135deg, #f8f9fa, #ffffff);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      border-left: 4px solid #008080;
+    }
+
+    .search-filter-section .form-label {
+      font-weight: 600;
+      color: #008080; /* Consistent color */
+    }
+
+    .search-filter-section .form-control,
+    .search-filter-section .form-select {
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-filter-section .form-control:focus,
+    .search-filter-section .form-select:focus {
+      border-color: #008080;
+      box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    /* DataTables export buttons styling */
+    .dt-buttons .btn {
+      background: linear-gradient(135deg, #008970, #008080) !important;
+      color: white !important;
+      border: none !important;
+      border-radius: 8px !important;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+
+    .dt-buttons .btn:hover {
+      background: linear-gradient(135deg, #008970, #008080) !important;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Focus states for accessibility */
+    .btn:focus, .form-control:focus {
+      outline: 2px solid #008080;
+      outline-offset: 2px;
+    }
+
+    /* Loading states */
+    .btn-loading {
+      position: relative;
+      color: transparent;
+    }
+
+    .btn-loading::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 50%;
+      left: 50%;
+      margin-left: -8px;
+      margin-top: -8px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      border-right-color: transparent;
+      animation: spinner 0.75s linear infinite;
+    }
+
+    @keyframes spinner {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      z-index: 1100;
+    }
+
+    /* Edit patient modal */
+    .edit-form {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 10px;
+      border-left: 4px solid #008080;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 992px) {
+      .table-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .search-export-section {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .unified-search .form-control {
+        width: 250px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .search-export-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      
+      .unified-search {
+        width: 100%;
+      }
+      
+      .unified-search .form-control {
+        width: 100%;
+      }
+      
+      .export-buttons {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      
+      .table-container {
+        max-height: 400px;
+      }
+      
+      .dataTables_scrollBody {
+        max-height: 350px !important;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .table-header h4 {
+        font-size: 1.1rem;
+        text-align: center;
+        width: 100%;
+      }
+      .compact-actions {
+        justify-content: center;
+      }
+      .table-container {
+        max-height: 350px;
+      }
+      .dataTables_scrollBody {
+        max-height: 300px !important;
+      }
+    }
+
+    /* Skip link for accessibility */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 6px;
+      background: #008080;
+      color: white;
+      padding: 8px;
+      text-decoration: none;
+      border-radius: 4px;
+      z-index: 1000;
+    }
+
+    .skip-link:focus {
+      top: 6px;
+    }
+
+    .stats-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #008970, #008080);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .stat-card .number {
+      font-size: 2.2rem;
+      font-weight: bold;
+      display: block;
+    }
+
+    .stat-card .label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    /* Test truncation */
+    .tests-truncate {
+      cursor: help;
+    }
+
+    /* Modern icon styling */
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .icon-btn i {
+      font-size: 0.9em;
+    }
+
+    /* Enhanced header */
+    .page-header {
+      background: linear-gradient(135deg, #008080, #008970);
+      color: white;
+      padding: 25px;
+      border-radius: 18px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+
+    /* Enhanced table styling */
+    .table th {
+      font-weight: 600;
+      border-bottom: 2px solid #008080;
+    }
+
+    /* Status badges */
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-active {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-completed {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    /* Form styling improvements */
+    .form-label {
+      font-weight: 600;
+      color: #555;
+    }
+
+    .form-control, .form-select {
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: #008080;
+      box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    /* Modal improvements */
+    .modal-content {
+      border-radius: 18px;
+      border: none;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #008080, #008970);
+      color: white;
+      border-radius: 18px 18px 0 0;
+      border-bottom: none;
+    }
+
+    .modal-title {
+      font-weight: 700;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #008080, #008970);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #5a6fd8, #008970);
+    }
+
+    /* Animation for table rows */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #savedTable tbody tr {
+      animation: fadeIn 0.3s ease forwards;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Skip link for keyboard users -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+  <div class="container-fluid">
+    <!-- Enhanced Header -->
+    <div class="page-header">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h1 class="mb-1"><i class="fas fa-users-medical me-2"></i>Patient Management</h1>
+          <p class="mb-0 opacity-75">Manage all patient records, receipts, and reports in one place</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <button onclick="goBack()" class="btn btn-light icon-btn">
+            <i class="fas fa-arrow-left me-1"></i> Back
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card p-3 p-md-4">
+      <!-- NEW: Unified header with search and export buttons -->
+      <div class="table-header">
+        <h4><i class="fas fa-database me-2"></i>Patient Records</h4>
+        
+        <div class="search-export-section">
+          <!-- NEW: Unified search bar -->
+          <div class="unified-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="unifiedSearch" class="form-control" placeholder="Search patients...">
+          </div>
+          
+          <!-- NEW: Export buttons with equal spacing -->
+          <div class="export-buttons">
+            <button id="refreshBtn" class="btn btn-outline-primary icon-btn">
+              <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="stats-cards mb-4">
+        <div class="stat-card">
+          <span class="number" id="totalPatients">{{ patients|length if patients else 0 }}</span>
+          <span class="label"><i class="fas fa-user-injured me-1"></i> Total Patients</span>
+        </div>
+        <div class="stat-card">
+          <span class="number" id="totalAmount">
+            Rs {{ "%.2f"|format(patients|sum(attribute='amount')|float if patients else 0) }}
+          </span>
+          <span class="label"><i class="fas fa-money-bill-wave me-1"></i> Total Revenue</span>
+        </div>
+        <div class="stat-card">
+          <span class="number" id="malePatients">
+            {{ patients|selectattr('gender', 'equalto', 'Male')|list|length if patients else 0 }}
+          </span>
+          <span class="label"><i class="fas fa-male me-1"></i> Male Patients</span>
+        </div>
+        <div class="stat-card">
+          <span class="number" id="femalePatients">
+            {{ patients|selectattr('gender', 'equalto', 'Female')|list|length if patients else 0 }}
+          </span>
+          <span class="label"><i class="fas fa-female me-1"></i> Female Patients</span>
+        </div>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="search-filter-section">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label for="searchName" class="form-label"><i class="fas fa-search me-1"></i>Search by Name</label>
+            <input type="text" id="searchName" class="form-control" placeholder="Enter patient name...">
+          </div>
+          <div class="col-md-3">
+            <label for="filterGender" class="form-label"><i class="fas fa-venus-mars me-1"></i>Filter by Gender</label>
+            <select id="filterGender" class="form-select">
+              <option value="">All Genders</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="filterDoctor" class="form-label"><i class="fas fa-user-md me-1"></i>Filter by Doctor</label>
+            <select id="filterDoctor" class="form-select">
+              <option value="">All Doctors</option>
+              <!-- Doctors will be populated dynamically -->
+              {% if patients %}
+                {% set doctors = [] %}
+                {% for p in patients %}
+                  {% if p.doctor and p.doctor not in doctors %}
+                    {% set _ = doctors.append(p.doctor) %}
+                    <option value="{{ p.doctor }}">{{ p.doctor }}</option>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            </select>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button id="clearFilters" class="btn btn-outline-secondary w-100 icon-btn">
+              <i class="fas fa-times me-1"></i> Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEW: Fixed height table container -->
+      <div class="table-container">
+        <table id="savedTable" class="display table table-striped table-hover align-middle w-100">
+          <thead>
+            <tr>
+              <th width="100"><i class="fas fa-id-card me-1"></i> MR No</th>
+              <th width="150"><i class="fas fa-user me-1"></i> Name</th>
+              <th width="80"><i class="fas fa-birthday-cake me-1"></i> Age</th>
+              <th width="100"><i class="fas fa-venus-mars me-1"></i> Gender</th>
+              <th width="150"><i class="fas fa-user-md me-1"></i> Doctor</th>
+              <th width="200"><i class="fas fa-flask me-1"></i> Tests</th>
+              <th width="120"><i class="fas fa-money-bill me-1"></i> Amount</th>
+              <th width="130"><i class="fas fa-cogs me-1"></i> Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in patients %}
+            <tr data-patient-id="{{ p.mr_no }}">
+              <td><strong>{{ p.mr_no }}</strong></td>
+              <td>{{ p.name }}</td>
+              <td>{{ p.age }}</td>
+              <td>
+                {% if p.gender == 'Male' %}
+                  <i class="fas fa-male text-primary me-1"></i>
+                {% elif p.gender == 'Female' %}
+                  <i class="fas fa-female text-danger me-1"></i>
+                {% else %}
+                  <i class="fas fa-user me-1"></i>
+                {% endif %}
+                {{ p.gender }}
+              </td>
+              <td>{{ p.doctor }}</td>
+              <td class="tests-cell">
+                <span class="tests-truncate" title="{{ p.tests }}">
+                  {{ p.tests[:40] }}{% if p.tests|length > 40 %}...{% endif %}
+                </span>
+              </td>
+              <td><strong>Rs {{ "%.2f"|format(p.amount|float) if p.amount else "0.00" }}</strong></td>
+              <td>
+                <div class="compact-actions">
+                  <a href="/patients/{{ p.mr_no }}/receipt" 
+                     class="btn btn-sm btn-primary pdf-download" 
+                     title="Download PDF Receipt"
+                     data-mr-no="{{ p.mr_no }}">
+                    <i class="fas fa-file-pdf"></i>
+                  </a>
+                  <!-- View button removed as requested -->
+                  <button class="btn btn-sm btn-warning edit-patient" 
+                          data-patient-id="{{ p.mr_no }}"
+                          data-patient-name="{{ p.name }}"
+                          data-patient-age="{{ p.age }}"
+                          data-patient-gender="{{ p.gender }}"
+                          data-patient-doctor="{{ p.doctor }}"
+                          data-patient-tests="{{ p.tests }}"
+                          data-patient-amount="{{ p.amount }}"
+                          data-patient-reg-date="{{ p.reg_date }}"
+                          data-patient-reporting-date="{{ p.reporting_date }}"
+                          title="Edit Patient">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-danger delete-patient" 
+                          data-patient-id="{{ p.mr_no }}"
+                          data-patient-name="{{ p.name }}"
+                          title="Delete Patient">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Patient Modal -->
+  <div class="modal fade" id="editPatientModal" tabindex="-1" aria-labelledby="editPatientModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editPatientModalLabel"><i class="fas fa-edit me-2"></i>Edit Patient</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editPatientForm" class="edit-form">
+            <input type="hidden" id="editMrNo" name="mr_no">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editName" class="form-label">Patient Name</label>
+                  <input type="text" class="form-control" id="editName" name="name" required>
+                </div>
+                <div class="mb-3">
+                  <label for="editAge" class="form-label">Age</label>
+                  <input type="number" class="form-control" id="editAge" name="age" required>
+                </div>
+                <div class="mb-3">
+                  <label for="editGender" class="form-label">Gender</label>
+                  <select class="form-select" id="editGender" name="gender" required>
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="editDoctor" class="form-label">Doctor</label>
+                  <input type="text" class="form-control" id="editDoctor" name="doctor" required>
+                </div>
+                <div class="mb-3">
+                  <label for="editTests" class="form-label">Tests</label>
+                  <textarea class="form-control" id="editTests" name="tests" rows="3" required></textarea>
+                </div>
+                <div class="mb-3">
+                  <label for="editAmount" class="form-label">Amount</label>
+                  <input type="number" step="0.01" class="form-control" id="editAmount" name="amount" required>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i> Cancel
+          </button>
+          <button type="button" class="btn btn-primary" id="savePatientChanges">
+            <i class="fas fa-save me-1"></i> Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+
+  <script>
+    // Back button function - FIXED
+    function goBack() {
+      const referrer = document.referrer;
+      const currentHost = window.location.host;
+      
+      console.log('Referrer:', referrer);
+      console.log('Current host:', currentHost);
+      
+      if (referrer && referrer.includes(currentHost) && referrer !== window.location.href) {
+        // Go back to previous page
+        window.history.back();
+      } else {
+        // Default fallback to dashboard
+        window.location.href = "/dashboard";
+      }
+    }
+
+    // Toast notification function - MOVED TO GLOBAL SCOPE
+    function showToast(message, type = 'info') {
+      const bgColor = type === 'error' ? 'bg-danger' : 
+                      type === 'success' ? 'bg-success' : 
+                      type === 'warning' ? 'bg-warning' : 'bg-info';
+      
+      const icon = type === 'error' ? '❌' : 
+                  type === 'success' ? '✅' : 
+                  type === 'warning' ? '⚠️' : 'ℹ️';
+      
+      const toast = $(`
+        <div class="toast align-items-center text-white ${bgColor} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="d-flex">
+            <div class="toast-body">
+              <strong>${icon}</strong> ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      `);
+      
+      $('#toastContainer').append(toast);
+      const bsToast = new bootstrap.Toast(toast[0], { 
+        autohide: true,
+        delay: type === 'error' ? 5000 : 3000 
+      });
+      bsToast.show();
+      
+      toast.on('hidden.bs.toast', function() {
+        $(this).remove();
+      });
+    }
+
+    // Unified PDF download function (EXACTLY SAME AS RECEPTION PAGE)
+    function downloadPatientPDF(mrNo, patientName) {
+      const pdfUrl = `/patients/${mrNo}/receipt`;
+      
+      // Show loading state
+      console.log('Generating PDF for MR No:', mrNo, 'Patient:', patientName);
+      
+      // Create loading window (SAME AS RECEPTION PAGE)
+      const loadingWindow = window.open('', '_blank');
+      if (loadingWindow) {
+        loadingWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Loading PDF...</title>
+              <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+              <style>
+                body { 
+                  background: linear-gradient(135deg, #008080 0%, #008970 100%);
+                  font-family: 'Segoe UI', Tahoma, sans-serif;
+                }
+                .loading-container {
+                  height: 100vh;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  flex-direction: column;
+                  color: white;
+                  text-align: center;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="loading-container">
+                <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <h4>Generating PDF Receipt</h4>
+                <p class="mb-1">Patient: <strong>${patientName}</strong></p>
+                <p>MR Number: <strong>${mrNo}</strong></p>
+                <small class="text-light opacity-75">Please wait while we prepare your document...</small>
+              </div>
+            </body>
+          </html>
+        `);
+      }
+      
+      // Open PDF after short delay (SAME LOGIC AS RECEPTION PAGE)
+      setTimeout(() => {
+        const pdfWindow = window.open(pdfUrl, '_blank');
+        
+        // Close loading window after PDF opens
+        setTimeout(() => {
+          if (loadingWindow && !loadingWindow.closed) {
+            loadingWindow.close();
+          }
+        }, 2000);
+        
+        showToast(`PDF receipt for ${patientName} generated successfully`, 'success');
+      }, 1500); // Same delay as reception page
+    }
+
+    $(document).ready(function () {
+      console.log('Patient Management page loaded successfully');
+      
+      // Define table variable at the top
+      let table;
+
+      // Update statistics function - defined BEFORE DataTable initialization
+      function updateStatistics() {
+        if (!table) return; // Safety check
+        
+        const totalPatients = table.rows({ search: 'applied' }).count();
+        let totalAmount = 0;
+        let malePatients = 0;
+        let femalePatients = 0;
+
+        table.rows({ search: 'applied' }).every(function() {
+          const data = this.data();
+          const amountText = $(data[6]).text().trim();
+          const amountValue = amountText.replace('Rs', '').replace(',', '').trim();
+          totalAmount += parseFloat(amountValue) || 0;
+          
+          // Extract gender text from HTML content
+          const genderText = $(data[3]).text().trim();
+          if (genderText.includes('Male')) malePatients++;
+          if (genderText.includes('Female')) femalePatients++;
+        });
+
+        $('#totalPatients').text(totalPatients);
+        $('#totalAmount').text('Rs ' + totalAmount.toFixed(2));
+        $('#malePatients').text(malePatients);
+        $('#femalePatients').text(femalePatients);
+      }
+
+      // FIXED: Populate doctors filter dynamically from ALL data (not just current page)
+      function populateDoctorsFilter() {
+        if (!table) return; // Safety check
+        
+        const doctors = new Set();
+        
+        // Get data from ALL pages, not just current view
+        table.rows({ search: 'none' }).every(function() {
+          const doctor = this.data()[4];
+          if (doctor && doctor.trim() !== '') {
+            doctors.add(doctor.trim());
+          }
+        });
+        
+        const doctorSelect = $('#filterDoctor');
+        doctorSelect.empty().append('<option value="">All Doctors</option>');
+        
+        // Sort doctors alphabetically
+        const sortedDoctors = Array.from(doctors).sort((a, b) => a.localeCompare(b));
+        
+        sortedDoctors.forEach(doctor => {
+          doctorSelect.append(`<option value="${doctor}">${doctor}</option>`);
+        });
+        
+        console.log('Doctors dropdown populated with:', sortedDoctors);
+      }
+
+      // Initialize DataTable with enhanced configuration - UPDATED
+      table = $('#savedTable').DataTable({
+        dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rtip',
+        buttons: [
+          {
+            extend: 'copy',
+            text: '<i class="fas fa-copy me-1"></i> Copy',
+            className: 'btn-sm',
+            exportOptions: {
+              columns: ':not(:last-child)'
+            }
+          },
+          {
+            extend: 'csv',
+            text: '<i class="fas fa-file-csv me-1"></i> CSV',
+            className: 'btn-sm',
+            exportOptions: {
+              columns: ':not(:last-child)'
+            }
+          },
+          {
+            extend: 'excel',
+            text: '<i class="fas fa-file-excel me-1"></i> Excel',
+            className: 'btn-sm',
+            exportOptions: {
+              columns: ':not(:last-child)'
+            }
+          },
+          {
+            extend: 'pdf',
+            text: '<i class="fas fa-file-pdf me-1"></i> PDF',
+            className: 'btn-sm',
+            exportOptions: {
+              columns: ':not(:last-child)'
+            }
+          },
+          {
+            extend: 'print',
+            text: '<i class="fas fa-print me-1"></i> Print',
+            className: 'btn-sm',
+            exportOptions: {
+              columns: ':not(:last-child)'
+            }
+          }
+        ],
+        responsive: true,
+        pageLength: 15, // Increased page length
+        lengthMenu: [[10, 15, 25, 50, -1], [10, 15, 25, 50, "All"]],
+        order: [[0, 'desc']],
+        scrollY: '400px', // Fixed height for table body
+        scrollCollapse: true,
+        scrollX: true, // Added horizontal scroll if needed
+        language: {
+          search: "",
+          lengthMenu: "Show _MENU_ patients",
+          info: "Showing _START_ to _END_ of _TOTAL_ patients",
+          infoEmpty: "Showing 0 to 0 of 0 patients",
+          infoFiltered: "(filtered from _MAX_ total patients)",
+          zeroRecords: "No matching patients found",
+          paginate: {
+            previous: "<i class='fas fa-chevron-left'></i> Previous",
+            next: "Next <i class='fas fa-chevron-right'></i>"
+          }
+        },
+        initComplete: function() {
+          console.log('DataTable initialized successfully');
+          updateStatistics();
+          populateDoctorsFilter();
+          
+          // Hide the default DataTables search box since we have our unified search
+          $('.dataTables_filter').hide();
+        },
+        drawCallback: function() {
+          updateStatistics();
+        }
+      });
+
+      // NEW: Unified search functionality
+      $('#unifiedSearch').on('keyup', function() {
+        table.search(this.value).draw();
+      });
+
+      // FIXED: Search functionality - search across all columns
+      $('#searchName').on('keyup', function() {
+        table.search(this.value).draw();
+      });
+
+      // FIXED: Gender filter - handle HTML content in gender column
+      $('#filterGender').on('change', function() {
+        const gender = this.value;
+        if (gender === '') {
+          table.column(3).search('').draw();
+        } else {
+          // Search for gender in the text content of the column
+          table.column(3).search(gender, true, false).draw();
+        }
+      });
+
+      // FIXED: Doctor filter - now works with all doctors from database
+      $('#filterDoctor').on('change', function() {
+        const doctor = this.value;
+        if (doctor === '') {
+          table.column(4).search('').draw();
+        } else {
+          table.column(4).search('^' + doctor + '$', true, false).draw();
+        }
+      });
+
+      // Clear all filters
+      $('#clearFilters').on('click', function() {
+        $('#searchName').val('');
+        $('#filterGender').val('');
+        $('#filterDoctor').val('');
+        $('#unifiedSearch').val('');
+        table.search('').columns().search('').draw();
+        showToast('All filters cleared', 'info');
+      });
+
+      // Refresh functionality - also repopulates doctors dropdown
+      $('#refreshBtn').on('click', function() {
+        const btn = $(this);
+        btn.addClass('btn-loading');
+        btn.prop('disabled', true);
+        
+        // Repopulate doctors dropdown before refresh
+        populateDoctorsFilter();
+        
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+      });
+
+      // DELETE PATIENT FUNCTIONALITY
+      $(document).on('click', '.delete-patient', function() {
+        const patientId = $(this).data('patient-id');
+        const patientName = $(this).data('patient-name');
+        
+        if (confirm(`Are you sure you want to delete patient "${patientName}" (MR: ${patientId})?`)) {
+          const btn = $(this);
+          const row = btn.closest('tr');
+          
+          btn.addClass('btn-loading');
+          btn.prop('disabled', true);
+
+          // DELETE API CALL
+          fetch(`/patients/delete/${patientId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
+          .then(response => {
+            console.log('Delete response:', response.status);
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log('Delete data:', data);
+            if (data.success) {
+              table.row(row).remove().draw();
+              updateStatistics();
+              // Repopulate doctors dropdown after deletion
+              populateDoctorsFilter();
+              showToast(`Patient "${patientName}" deleted successfully`, 'success');
+            } else {
+              showToast(`Failed to delete patient: ${data.message}`, 'error');
+            }
+          })
+          .catch(error => {
+            console.error('Delete error:', error);
+            showToast('Error deleting patient. Please try again.', 'error');
+          })
+          .finally(() => {
+            btn.removeClass('btn-loading');
+            btn.prop('disabled', false);
+          });
+        }
+      });
+
+      // EDIT PATIENT FUNCTIONALITY
+      $(document).on('click', '.edit-patient', function() {
+        const patientId = $(this).data('patient-id');
+        const patientName = $(this).data('patient-name');
+        const patientAge = $(this).data('patient-age');
+        const patientGender = $(this).data('patient-gender');
+        const patientDoctor = $(this).data('patient-doctor');
+        const patientTests = $(this).data('patient-tests');
+        const patientAmount = $(this).data('patient-amount');
+        
+        console.log('Editing patient:', patientId);
+        
+        $('#editMrNo').val(patientId);
+        $('#editName').val(patientName);
+        $('#editAge').val(patientAge);
+        $('#editGender').val(patientGender);
+        $('#editDoctor').val(patientDoctor);
+        $('#editTests').val(patientTests);
+        $('#editAmount').val(patientAmount);
+        
+        $('#editPatientModal').modal('show');
+      });
+
+      // Save patient changes
+      $('#savePatientChanges').on('click', function() {
+        const btn = $(this);
+        const formData = new FormData(document.getElementById('editPatientForm'));
+        const patientId = $('#editMrNo').val();
+        
+        btn.addClass('btn-loading');
+        btn.prop('disabled', true);
+        
+        const jsonData = {};
+        formData.forEach((value, key) => {
+          jsonData[key] = value;
+        });
+        
+        console.log('Updating patient:', patientId, jsonData);
+        
+        // UPDATE API CALL
+        fetch(`/patients/update/${patientId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(jsonData)
+        })
+        .then(response => {
+          console.log('Update response:', response.status);
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Update data:', data);
+          if (data.success) {
+            const row = $(`tr[data-patient-id="${patientId}"]`);
+            const rowData = table.row(row).data();
+            
+            rowData[1] = jsonData.name;
+            rowData[2] = jsonData.age;
+            rowData[3] = `
+              ${jsonData.gender === 'Male' ? '<i class="fas fa-male text-primary me-1"></i>' : 
+                jsonData.gender === 'Female' ? '<i class="fas fa-female text-danger me-1"></i>' : 
+                '<i class="fas fa-user me-1"></i>'} 
+              ${jsonData.gender}
+            `;
+            rowData[4] = jsonData.doctor;
+            rowData[5] = `<span class="tests-truncate" title="${jsonData.tests}">${jsonData.tests.substring(0, 40)}${jsonData.tests.length > 40 ? '...' : ''}</span>`;
+            rowData[6] = `<strong>Rs ${parseFloat(jsonData.amount).toFixed(2)}</strong>`;
+            
+            table.row(row).data(rowData).draw();
+            
+            row.find('.edit-patient')
+              .data('patient-name', jsonData.name)
+              .data('patient-age', jsonData.age)
+              .data('patient-gender', jsonData.gender)
+              .data('patient-doctor', jsonData.doctor)
+              .data('patient-tests', jsonData.tests)
+              .data('patient-amount', jsonData.amount);
+              
+            row.find('.delete-patient').data('patient-name', jsonData.name);
+            
+            // Repopulate doctors dropdown after edit (in case doctor name changed)
+            populateDoctorsFilter();
+            
+            $('#editPatientModal').modal('hide');
+            showToast(`Patient "${jsonData.name}" updated successfully`, 'success');
+          } else {
+            showToast(`Failed to update patient: ${data.message}`, 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Update error:', error);
+          showToast('Error updating patient. Please try again.', 'error');
+        })
+        .finally(() => {
+          btn.removeClass('btn-loading');
+          btn.prop('disabled', false);
+        });
+      });
+
+      // UPDATED: PDF download with EXACT SAME LOGIC AS RECEPTION PAGE
+      $(document).on('click', '.pdf-download', function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const mrNo = btn.data('mr-no');
+        const patientName = btn.closest('tr').find('td:eq(1)').text().trim();
+        
+        // Show loading state on button
+        const originalHtml = btn.html();
+        btn.html('<i class="fas fa-spinner fa-spin"></i>');
+        btn.prop('disabled', true);
+        
+        // Use the SAME function as reception page
+        downloadPatientPDF(mrNo, patientName);
+        
+        // Reset button after download process starts
+        setTimeout(() => {
+          btn.html(originalHtml);
+          btn.prop('disabled', false);
+        }, 2000);
+      });
+
+      // Keyboard navigation support
+      $(document).on('keydown', function(e) {
+        if (e.key === 'Escape') {
+          $('.modal.show').modal('hide');
+          $('.toast.show').toast('hide');
+        }
+        
+        if (e.ctrlKey && e.key === 'f') {
+          e.preventDefault();
+          $('#unifiedSearch').focus();
+          showToast('Search focused - start typing to filter patients', 'info');
+        }
+        
+        if (e.ctrlKey && e.key === 'r') {
+          e.preventDefault();
+          $('#refreshBtn').click();
+        }
+      });
+
+      // Initialize tooltips
+      $('[title]').tooltip({
+        trigger: 'hover',
+        placement: 'top'
+      });
+
+      console.log('Patient Management page JavaScript initialized successfully');
+    });
+  </script>
+</body>
+</html>

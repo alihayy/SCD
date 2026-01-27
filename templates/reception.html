@@ -1,0 +1,1751 @@
+<!-- reception.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Receptionist Dashboard</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Select2 CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
+  <!-- Socket.IO Client -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+  <style>
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* High contrast support */
+    @media (prefers-contrast: high) {
+      .card {
+        border: 2px solid #000000;
+      }
+      body {
+        background: #ffffff;
+      }
+    }
+
+    body {
+      background: linear-gradient(135deg, #e9fdf6, #f5faf9);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 1rem;
+      color: #333;
+    }
+
+    /* Header gradient bar */
+    .dashboard-header {
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(90deg, #008970, #006D5B);
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      letter-spacing: 0.5px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .dashboard-header:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+
+    .card {
+      border-radius: 14px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      border: none;
+      background-color: #fff;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+
+    .required::after {
+      content: " *";
+      color: red;
+    }
+
+    .btn-success {
+      background: linear-gradient(90deg, #008970, #006D5B);
+      border: none;
+      transition: all 0.3s ease;
+    }
+
+    .btn-success:hover {
+      background: linear-gradient(90deg, #00a383, #007c68);
+      transform: translateY(-2px);
+    }
+
+    .btn-outline-success {
+      color: #006D5B;
+      border-color: #006D5B;
+      transition: all 0.3s ease;
+    }
+
+    .btn-outline-success:hover {
+      background: linear-gradient(90deg, #008970, #006D5B);
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    #successPopup {
+      border-left: 5px solid #008970;
+      font-weight: 500;
+      background-color: #e7fff4;
+      border-radius: 8px;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Hover effects for form fields */
+    input:focus, textarea:focus, select:focus {
+      border-color: #00a383 !important;
+      box-shadow: 0 0 0 0.15rem rgba(0, 137, 112, 0.25) !important;
+      transition: all 0.2s ease-in-out;
+      outline: 2px solid #006D5B;
+      outline-offset: 1px;
+    }
+
+    /* Focus states for accessibility */
+    .btn:focus, .form-control:focus, .form-select:focus {
+      outline: 2px solid #006D5B;
+      outline-offset: 2px;
+    }
+
+    /* Validation states */
+    .is-invalid {
+      border-color: #dc3545;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 3.6.4.4.4-.4'/%3e%3cpath d='M6 7v2'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right calc(0.375em + 0.1875rem) center;
+      background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+
+    .is-valid {
+      border-color: #198754;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right calc(0.375em + 0.1875rem) center;
+      background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+
+    /* Loading states */
+    .btn-loading {
+      position: relative;
+      color: transparent;
+    }
+
+    .btn-loading::after {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      top: 50%;
+      left: 50%;
+      margin-left: -10px;
+      margin-top: -10px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      border-right-color: transparent;
+      animation: spinner 0.75s linear infinite;
+    }
+
+    @keyframes spinner {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      z-index: 1100;
+    }
+
+    /* Test Selection Styles */
+    .test-summary {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+      border: 1px solid #e9ecef;
+    }
+
+    .selected-test {
+      background: #e9f7ef;
+      border: 1px solid #008970;
+      border-radius: 5px;
+      padding: 8px 12px;
+      margin: 5px;
+      display: inline-block;
+      font-size: 0.9rem;
+    }
+
+    .selected-test .remove-test {
+      cursor: pointer;
+      margin-left: 8px;
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    .selected-test .remove-test:hover {
+      color: #b02a37;
+    }
+
+    .amount-display {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #008970;
+    }
+
+    /* Select2 customization */
+    .select2-container--default .select2-selection--multiple {
+      border: 1px solid #ced4da;
+      border-radius: 0.375rem;
+      min-height: 120px;
+    }
+
+    .select2-container--default.select2-container--focus .select2-selection--multiple {
+      border-color: #00a383;
+      box-shadow: 0 0 0 0.15rem rgba(0, 137, 112, 0.25);
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 768px) {
+      .dashboard-header {
+        text-align: center;
+        margin-bottom: 10px;
+        font-size: 1.3rem;
+      }
+      .top-actions {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 10px;
+      }
+      .top-actions a {
+        width: 100%;
+      }
+      .text-end {
+        text-align: center !important;
+      }
+      .selected-test {
+        display: block;
+        width: 100%;
+        margin: 5px 0;
+      }
+    }
+
+    /* Skip link for accessibility */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 6px;
+      background: #006D5B;
+      color: white;
+      padding: 8px;
+      text-decoration: none;
+      border-radius: 4px;
+      z-index: 1000;
+    }
+
+    .skip-link:focus {
+      top: 6px;
+    }
+
+    /* NEW: FAQ & Chatbot Styles */
+    .help-buttons-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .help-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    .help-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+
+    .faq-btn {
+      background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+    }
+
+    .chatbot-btn {
+      background: linear-gradient(135deg, #2196f3, #1976d2);
+    }
+
+    .btn-label {
+      position: absolute;
+      right: 60px;
+      background: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateX(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .help-btn:hover .btn-label {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    /* Chatbot Container */
+    .chatbot-container {
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      width: 350px;
+      height: 450px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      z-index: 999;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      animation: slideUp 0.3s ease;
+      border: 1px solid #e0e0e0;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .chatbot-header {
+      background: linear-gradient(135deg, #2196f3, #1976d2);
+      color: white;
+      padding: 15px;
+      border-radius: 15px 15px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chatbot-header h5 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .chatbot-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .chatbot-body {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      background: #f8f9fa;
+    }
+
+    .chatbot-footer {
+      padding: 12px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .message {
+      margin-bottom: 12px;
+      display: flex;
+    }
+
+    .bot-message {
+      justify-content: flex-start;
+    }
+
+    .user-message {
+      justify-content: flex-end;
+    }
+
+    .message-bubble {
+      max-width: 75%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .bot-bubble {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 0 18px 18px 18px;
+    }
+
+    .user-bubble {
+      background: linear-gradient(135deg, #2196f3, #1976d2);
+      color: white;
+      border-radius: 18px 0 18px 18px;
+    }
+
+    .quick-replies {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .quick-reply {
+      background: #e9ecef;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .quick-reply:hover {
+      background: #dee2e6;
+      transform: translateY(-1px);
+    }
+
+    /* FAQ Container */
+    .faq-container {
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      width: 350px;
+      height: 450px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      z-index: 999;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      animation: slideUp 0.3s ease;
+      border: 1px solid #e0e0e0;
+    }
+
+    .faq-header {
+      background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+      color: white;
+      padding: 15px;
+      border-radius: 15px 15px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .faq-header h5 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .faq-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .faq-search {
+      padding: 12px;
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .faq-search input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 20px;
+      font-size: 0.9rem;
+    }
+
+    .faq-body {
+      flex: 1;
+      padding: 0;
+      overflow-y: auto;
+      background: white;
+    }
+
+    .faq-category {
+      padding: 15px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .faq-category h6 {
+      color: #9c27b0;
+      font-weight: 600;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+    }
+
+    .faq-item {
+      padding: 12px;
+      border-bottom: 1px solid #f8f8f8;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .faq-item:hover {
+      background: #f8f9fa;
+    }
+
+    .faq-question {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .faq-answer {
+      margin-top: 8px;
+      color: #666;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      display: none;
+    }
+
+    .faq-item.active .faq-answer {
+      display: block;
+    }
+
+    .faq-item.active .faq-question i {
+      transform: rotate(180deg);
+    }
+
+    @media (max-width: 576px) {
+      .chatbot-container,
+      .faq-container {
+        width: 300px;
+        height: 400px;
+        right: 10px;
+        bottom: 80px;
+      }
+      
+      .help-buttons-container {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Skip link for keyboard users -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 top-actions flex-wrap">
+    <h2 class="dashboard-header mb-0">Receptionist Dashboard</h2>
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-danger mt-2 mt-md-0">Logout</a>
+  </div>
+
+  <main id="main-content">
+    <!-- Register Patient -->
+    <div class="card p-4 mb-4">
+      <h4 class="mb-3 text-success">🩺 Register New Patient</h4>
+
+      <form id="patientForm" novalidate>
+        <div class="row g-3">
+          <!-- Personal Information -->
+          <div class="col-md-4 col-sm-6">
+            <label for="reg_date" class="form-label required">Registration Date</label>
+            <input type="date" name="reg_date" id="reg_date" class="form-control" value="{{ today_date }}" required 
+                   aria-required="true" aria-describedby="reg_date_help">
+            <div class="invalid-feedback" id="reg_date_error">Please select a valid registration date.</div>
+          </div>
+
+          <div class="col-md-4 col-sm-6">
+            <label for="reporting_date" class="form-label required">Reporting Date</label>
+            <input type="date" name="reporting_date" id="reporting_date" class="form-control" required
+                   aria-required="true" aria-describedby="reporting_date_help">
+            <div class="invalid-feedback" id="reporting_date_error">Please select a valid reporting date.</div>
+          </div>
+
+          <div class="col-md-6 col-sm-12">
+            <label for="name" class="form-label required">Patient Name</label>
+            <input type="text" name="name" id="name" class="form-control" required
+                   aria-required="true" placeholder="Enter patient full name">
+            <div class="invalid-feedback" id="name_error">Please enter a valid patient name (letters and spaces only).</div>
+          </div>
+
+          <div class="col-md-3 col-sm-6">
+            <label for="gender" class="form-label required">Gender</label>
+            <select name="gender" id="gender" class="form-select" required aria-required="true">
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+            <div class="invalid-feedback" id="gender_error">Please select a gender.</div>
+          </div>
+
+          <div class="col-md-3 col-sm-6">
+            <label for="age" class="form-label required">Age</label>
+            <input type="number" name="age" id="age" class="form-control" required
+                   aria-required="true" min="1" max="120" placeholder="Age">
+            <div class="invalid-feedback" id="age_error">Please enter a valid age (1-120).</div>
+          </div>
+
+          <div class="col-md-6 col-sm-12">
+            <label for="phone" class="form-label">Phone Number</label>
+            <input type="text" name="phone" id="phone" class="form-control" placeholder="0300-1234567">
+          </div>
+
+          <div class="col-12">
+            <label for="address" class="form-label">Address</label>
+            <textarea name="address" id="address" class="form-control" rows="2" placeholder="Enter patient address"></textarea>
+          </div>
+
+          <div class="col-md-6 col-sm-12">
+            <label for="doctor" class="form-label required">Consultant / Doctor</label>
+            <input type="text" name="doctor" id="doctor" class="form-control" required
+                   aria-required="true" placeholder="Doctor's name">
+            <div class="invalid-feedback" id="doctor_error">Please enter doctor's name.</div>
+          </div>
+
+          <!-- Test Selection Section -->
+          <div class="col-12">
+            <label for="tests_select" class="form-label required">Select Tests</label>
+            <select name="tests_select" id="tests_select" class="form-control" multiple="multiple" style="width: 100%" required>
+              <!-- Tests will be loaded dynamically -->
+            </select>
+            <small class="text-muted">Type to search tests. You can select multiple tests.</small>
+            <div class="invalid-feedback" id="tests_error">Please select at least one test.</div>
+          </div>
+
+          <!-- Selected Tests Summary -->
+          <div class="col-12">
+            <div id="selectedTestsSummary" class="test-summary" style="display: none;">
+              <h6>Selected Tests:</h6>
+              <div id="selectedTestsList"></div>
+              <div class="mt-3">
+                <strong>Total Amount: <span class="amount-display">Rs. <span id="totalAmount">0.00</span></span></strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hidden fields for form submission -->
+          <input type="hidden" name="tests" id="tests">
+          <input type="hidden" name="amount" id="amount">
+
+        </div>
+
+        <div class="mt-3 text-end">
+          <button type="submit" class="btn btn-success px-4" id="submitBtn">
+            + Add Patient
+          </button>
+        </div>
+      </form>
+
+      <!-- Success Popup -->
+      <div id="successPopup" class="alert alert-success mt-3" style="display:none;" role="alert">
+        ✅ Patient added successfully!  
+        <br><br>
+        <div class="d-flex flex-wrap gap-2">
+          <button id="downloadBtn" class="btn btn-primary btn-sm">Download PDF</button>
+          <button id="printBtn" class="btn btn-secondary btn-sm">Print</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Saved Patients Button -->
+    <div class="card p-4 text-center">
+      <h5 class="text-success mb-3">💾 Manage All Patients</h5>
+      <p class="text-muted mb-3">View, edit, delete patients and manage receipts</p>
+      <a href="{{ url_for('patients.saved_patients') }}" class="btn btn-success w-auto px-4 py-2">
+        📋 Go to Patients Management
+      </a>
+    </div>
+    <!-- Lab Reports Button Card - -->
+<div class="card p-4 text-center mb-4">
+  <h5 class="text-success mb-3">📊 Lab Test Reports</h5>
+  <p class="text-muted mb-3">View and download detailed lab test reports with normal ranges</p>
+  <a href="{{ url_for('patients.lab_reports') }}" class="btn btn-info w-auto px-4 py-2" style="background: linear-gradient(90deg, #006D5B, #008970); border: none;">
+    📄 Go to Lab Reports
+  </a>
+</div>
+<div class="col-12 mt-3" id="testResultsSection" style="display: none;">
+    <h5 class="text-success mb-3">📝 Enter Test Results</h5>
+    <div id="testResultsContainer">
+        <!-- Dynamic test result fields will be added here -->
+    </div>
+</div>
+  </main>
+
+  <!-- NEW: FAQ & Chatbot Help Buttons -->
+  <div class="help-buttons-container">
+    <button class="help-btn faq-btn" onclick="toggleFAQ()">
+      <i class="fas fa-question-circle"></i>
+      <span class="btn-label">FAQ & Help</span>
+    </button>
+    <button class="help-btn chatbot-btn" onclick="toggleChatbot()">
+      <i class="fas fa-robot"></i>
+      <span class="btn-label">Live Assistant</span>
+    </button>
+  </div>
+
+  <!-- Chatbot Container -->
+  <div class="chatbot-container" id="chatbotContainer">
+    <div class="chatbot-header">
+      <h5><i class="fas fa-robot me-2"></i>Reception Assistant</h5>
+      <button class="chatbot-close" onclick="closeChatbot()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="chatbot-body" id="chatbotBody">
+      <!-- Chat messages will be loaded here -->
+    </div>
+    <div class="chatbot-footer">
+      <div class="input-group">
+        <input type="text" id="chatInput" class="form-control" placeholder="Type your question..." onkeypress="handleChatInput(event)">
+        <button class="btn btn-primary" onclick="sendMessage()">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+      <div class="quick-replies mt-2" id="quickReplies">
+        <!-- Quick replies will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ Container -->
+  <div class="faq-container" id="faqContainer">
+    <div class="faq-header">
+      <h5><i class="fas fa-question-circle me-2"></i>Reception FAQ</h5>
+      <button class="faq-close" onclick="closeFAQ()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="faq-search">
+      <input type="text" id="faqSearch" placeholder="Search FAQs..." oninput="filterFAQ()">
+    </div>
+    <div class="faq-body" id="faqBody">
+      <!-- FAQ content will be loaded here -->
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  <!-- Font Awesome for icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+  <script>
+    // ============================
+    // GLOBAL VARIABLES
+    // ============================
+    let socket = null;
+    let lastAddedPatientId = null;
+    let selectedTests = [];
+    let allTests = [];
+    let isFAQOpen = false;
+    let isChatbotOpen = false;
+
+    // ============================
+    // SOCKET.IO INITIALIZATION
+    // ============================
+    function initializeSocket() {
+      // Connect to Socket.IO server
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const socketUrl = `${protocol}//${host}`;
+      
+      socket = io(socketUrl, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+      });
+
+      // Connection events
+      socket.on('connect', () => {
+        console.log('Socket.IO connected successfully');
+        showToast('Connected to help system', 'success');
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Socket.IO disconnected');
+        showToast('Disconnected from help system', 'warning');
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('Socket.IO connection error:', error);
+        showToast('Connection error. Using offline mode.', 'error');
+      });
+
+      // FAQ events
+      socket.on('faq_data', (data) => {
+        console.log('Received FAQ data:', data);
+        loadFAQData(data);
+      });
+
+      socket.on('faq_search_results', (results) => {
+        displayFAQSearchResults(results);
+      });
+
+      socket.on('faq_click_analytics', (data) => {
+        console.log('FAQ click analytics:', data);
+        // You can use this data for analytics if needed
+      });
+
+      socket.on('faq_update', (update) => {
+        console.log('FAQ update received:', update);
+        showToast('FAQ content has been updated', 'info');
+        if (isFAQOpen) {
+          loadFAQFromServer();
+        }
+      });
+
+      socket.on('chat_response', (data) => {
+        console.log('Chat response received:', data);
+        addBotMessage(data.response);
+      });
+
+      socket.on('helpful_users', (users) => {
+        console.log('Currently active helpful users:', users);
+        // Could display this in the UI if needed
+      });
+
+      // Admin notifications (for demo purposes)
+      socket.on('admin_notification', (notification) => {
+        showToast(`Admin: ${notification.message}`, 'info');
+      });
+    }
+
+    // ============================
+    // MAIN RECEPTION FUNCTIONALITY
+    // ============================
+    $(document).ready(function () {
+      // Initialize Socket.IO
+      initializeSocket();
+
+      // Initialize Select2 for tests dropdown
+      $('#tests_select').select2({
+        placeholder: "Search and select tests...",
+        allowClear: true,
+        width: '100%',
+        closeOnSelect: false
+      });
+
+      // Update selected tests and calculate total
+      window.updateSelectedTests = function() {
+        const selectedValues = $('#tests_select').val() || [];
+        
+        // Clear current selection
+        selectedTests = [];
+        
+        // Get details for each selected test
+        selectedValues.forEach(testId => {
+          const test = allTests.find(t => t.TestId == testId);
+          if (test) {
+            selectedTests.push({
+              id: test.TestId,
+              name: test.TestName,
+              price: test.Price
+            });
+          }
+        });
+
+        // Update UI
+        updateTestsSummary();
+      };
+
+      // Load tests on page load
+      loadTests();
+
+      // Real-time validation for patient form
+      $('#patientForm input, #patientForm textarea, #patientForm select').on('blur', function() {
+        validatePatientField($(this));
+      });
+
+      // When tests are selected/deselected
+      $('#tests_select').on('change', function() {
+        updateSelectedTests();
+        validatePatientField($('#tests_select'));
+      });
+
+      // Enhanced patient form submission
+      $('#patientForm').on('submit', async function (e) {
+        e.preventDefault();
+        
+        // Validate all fields
+        let isValid = true;
+        $('#patientForm input, #patientForm textarea, #patientForm select').each(function() {
+          if (!validatePatientField($(this))) {
+            isValid = false;
+          }
+        });
+
+        if (!isValid) {
+          showToast('Please fix all validation errors before submitting.', 'error');
+          $('#patientForm').find('.is-invalid').first().focus();
+          return;
+        }
+
+        // Show loading state
+        const submitBtn = $('#submitBtn');
+        submitBtn.addClass('btn-loading');
+        submitBtn.prop('disabled', true);
+
+        try {
+          const formData = new FormData(this);
+          
+          // Update the hidden fields with current data
+          $('#tests').val(selectedTests.map(test => test.name).join(', '));
+          $('#amount').val(calculateTotalAmount());
+          
+          // Add the hidden fields to form data
+          formData.set('tests', $('#tests').val());
+          formData.set('amount', $('#amount').val());
+          
+          console.log('Submitting form data...', {
+            tests: $('#tests').val(),
+            amount: $('#amount').val(),
+            selectedTests: selectedTests
+          });
+
+          const response = await fetch("{{ url_for('patients.add_patient_route') }}", {
+            method: "POST",
+            body: formData
+          });
+
+          const result = await response.json();
+          console.log('Server response:', result);
+
+          if (result.success) {
+            lastAddedPatientId = result.mr_no;
+            $('#successPopup').slideDown();
+            
+            const pdfUrl = "/patients/" + result.mr_no + "/receipt";
+            
+            // Set up button handlers
+            $('#downloadBtn').off('click').on('click', () => window.open(pdfUrl, "_blank"));
+            $('#printBtn').off('click').on('click', () => {
+              const win = window.open(pdfUrl, "_blank");
+              win.print();
+            });
+
+            showToast('Patient added successfully!', 'success');
+            
+            // Send socket notification about new patient registration
+            if (socket && socket.connected) {
+              socket.emit('patient_registered', {
+                patientId: result.mr_no,
+                patientName: formData.get('name'),
+                testsCount: selectedTests.length,
+                totalAmount: formData.get('amount')
+              });
+            }
+            
+            this.reset();
+            $('#tests_select').val(null).trigger('change');
+            $('#selectedTestsSummary').hide();
+          } else {
+            let errorMessage = result.message || "Something went wrong!";
+            if (result.errors) {
+              errorMessage = result.errors.join(', ');
+            }
+            showToast(errorMessage, 'error');
+          }
+        } catch (error) {
+          showToast('Network error. Please try again.', 'error');
+          console.error('Error:', error);
+        } finally {
+          submitBtn.removeClass('btn-loading');
+          submitBtn.prop('disabled', false);
+        }
+      });
+
+      // Load tests from database
+      async function loadTests() {
+        try {
+          const response = await fetch("{{ url_for('patients.get_all_tests') }}");
+          if (!response.ok) {
+            throw new Error(`Server returned ${response.status}`);
+          }
+          
+          allTests = await response.json();
+          console.log('Tests loaded successfully:', allTests.length);
+          
+          // Populate dropdown
+          $('#tests_select').empty(); // Clear existing options
+          allTests.forEach(test => {
+            $('#tests_select').append(
+              new Option(`${test.TestName} - Rs. ${test.Price.toFixed(2)}`, test.TestId, false, false)
+            );
+          });
+          
+        } catch (error) {
+          console.error('Error loading tests:', error);
+          showToast('Error loading tests list. Please refresh the page.', 'error');
+        }
+      }
+
+      // Update tests summary display
+      function updateTestsSummary() {
+        const summaryDiv = $('#selectedTestsSummary');
+        const listDiv = $('#selectedTestsList');
+        const totalAmountSpan = $('#totalAmount');
+        
+        if (selectedTests.length === 0) {
+          summaryDiv.hide();
+          return;
+        }
+
+        // Clear previous list
+        listDiv.empty();
+        
+        // Add each test to summary
+        selectedTests.forEach(test => {
+          listDiv.append(`
+            <div class="selected-test">
+              ${test.name} - Rs. ${test.price.toFixed(2)}
+              <span class="remove-test" onclick="removeTest(${test.id})">×</span>
+            </div>
+          `);
+        });
+
+        // Update total
+        const total = calculateTotalAmount();
+        totalAmountSpan.text(total.toFixed(2));
+        
+        // Update hidden fields
+        $('#tests').val(selectedTests.map(t => t.name).join(', '));
+        $('#amount').val(total);
+        
+        // Show summary
+        summaryDiv.show();
+      }
+
+      // Calculate total amount
+      function calculateTotalAmount() {
+        return selectedTests.reduce((total, test) => total + test.price, 0);
+      }
+
+      // Remove test from selection (global function)
+      window.removeTest = function(testId) {
+        // Remove from select2
+        const currentValues = $('#tests_select').val() || [];
+        const newValues = currentValues.filter(id => id != testId);
+        $('#tests_select').val(newValues).trigger('change');
+      }
+
+      // Field validation function
+      function validatePatientField(field) {
+        const fieldName = field.attr('name');
+        
+        field.removeClass('is-invalid is-valid');
+        
+        let isValid = true;
+        let errorMessage = '';
+
+        // Special handling for different field types
+        let value;
+        if (fieldName === 'tests_select') {
+            // For Select2 multiple select, use selectedTests array
+            value = selectedTests.length;
+        } else {
+            // For regular fields, get value safely
+            value = field.val();
+            if (typeof value === 'string') {
+                value = value.trim();
+            } else if (Array.isArray(value)) {
+                // If it's an array (like multiple select), check if it has values
+                value = value.length;
+            } else {
+                value = value ? String(value) : '';
+            }
+        }
+
+        switch(fieldName) {
+          case 'name':
+            if (!value) {
+              isValid = false;
+              errorMessage = 'Patient name is required.';
+            } else if (typeof value === 'string' && !/^[A-Za-z\s\.\-]+$/.test(value)) {
+              isValid = false;
+              errorMessage = 'Name can only contain letters, spaces, dots, and hyphens.';
+            } else if (typeof value === 'string' && value.length < 2) {
+              isValid = false;
+              errorMessage = 'Name must be at least 2 characters long.';
+            }
+            break;
+            
+          case 'age':
+            if (!value) {
+              isValid = false;
+              errorMessage = 'Age is required.';
+            } else {
+              const age = parseInt(value);
+              if (isNaN(age) || age < 1 || age > 120) {
+                isValid = false;
+                errorMessage = 'Age must be between 1 and 120.';
+              }
+            }
+            break;
+            
+          case 'gender':
+            if (!value) {
+              isValid = false;
+              errorMessage = 'Please select a gender.';
+            }
+            break;
+            
+          case 'doctor':
+            if (!value) {
+              isValid = false;
+              errorMessage = 'Doctor name is required.';
+            } else if (typeof value === 'string' && value.length < 2) {
+              isValid = false;
+              errorMessage = 'Doctor name must be at least 2 characters long.';
+            }
+            break;
+            
+          case 'reg_date':
+          case 'reporting_date':
+            if (!value) {
+              isValid = false;
+              errorMessage = 'This date field is required.';
+            } else {
+              const date = new Date(value);
+              const today = new Date();
+              if (date > today) {
+                isValid = false;
+                errorMessage = 'Date cannot be in the future.';
+              }
+            }
+            break;
+            
+          case 'tests_select':
+            // Check if any tests are selected
+            if (value === 0 || selectedTests.length === 0) {
+              isValid = false;
+              errorMessage = 'Please select at least one test.';
+            }
+            break;
+        }
+
+        if (!isValid) {
+          field.addClass('is-invalid');
+        } else {
+          field.addClass('is-valid');
+        }
+
+        return isValid;
+      }
+
+      // Keyboard navigation support
+      $(document).on('keydown', function(e) {
+        // Escape key closes toasts and help panels
+        if (e.key === 'Escape') {
+          $('.toast').toast('hide');
+          closeChatbot();
+          closeFAQ();
+        }
+      });
+
+      // Auto-focus on reporting date field
+      $('#reporting_date').focus();
+
+      // Set reporting date to today by default
+      const today = new Date().toISOString().split('T')[0];
+      $('#reporting_date').val(today);
+    });
+
+    // ============================
+    // SOCKET.IO FAQ FUNCTIONALITY
+    // ============================
+
+    // Load FAQ data from server via Socket.IO
+    function loadFAQFromServer() {
+      if (socket && socket.connected) {
+        socket.emit('request_faq_data');
+      } else {
+        // Fallback to local data if socket is not connected
+        const fallbackData = getFallbackFAQData();
+        loadFAQData(fallbackData);
+        showToast('Using offline FAQ data', 'warning');
+      }
+    }
+
+    // Display FAQ data
+    function loadFAQData(data) {
+      const faqBody = $('#faqBody');
+      let html = '';
+      
+      data.forEach(category => {
+        html += `
+          <div class="faq-category">
+            <h6><i class="fas fa-folder me-2"></i>${category.category}</h6>
+        `;
+        
+        category.questions.forEach((faq, index) => {
+          html += `
+            <div class="faq-item" onclick="toggleFAQAnswer(this, '${category.category}', ${index})">
+              <div class="faq-question">
+                <span>${faq.q}</span>
+                <i class="fas fa-chevron-down"></i>
+              </div>
+              <div class="faq-answer">
+                ${faq.a}
+              </div>
+            </div>
+          `;
+        });
+        
+        html += `</div>`;
+      });
+      
+      faqBody.html(html);
+    }
+
+    // Display search results
+    function displayFAQSearchResults(results) {
+      const faqBody = $('#faqBody');
+      
+      if (results.length === 0) {
+        faqBody.html(`
+          <div class="text-center p-4 text-muted">
+            <i class="fas fa-search fa-2x mb-3"></i>
+            <p>No FAQs found for your search</p>
+          </div>
+        `);
+        return;
+      }
+
+      let html = '<div class="faq-category"><h6><i class="fas fa-search me-2"></i>Search Results</h6>';
+      
+      results.forEach(result => {
+        html += `
+          <div class="faq-item" onclick="toggleFAQAnswer(this, '${result.category}', ${result.index})">
+            <div class="faq-question">
+              <span>${result.question}</span>
+              <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+              ${result.answer}
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      faqBody.html(html);
+    }
+
+    // Toggle FAQ answer with Socket.IO tracking
+    function toggleFAQAnswer(element, category, questionIndex) {
+      $(element).toggleClass('active');
+      
+      // Send analytics data if socket is connected
+      if (socket && socket.connected) {
+        socket.emit('faq_click', {
+          category: category,
+          questionIndex: questionIndex,
+          action: $(element).hasClass('active') ? 'expand' : 'collapse',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    // Filter FAQ using Socket.IO
+    function filterFAQ() {
+      const searchTerm = $('#faqSearch').val().trim();
+      
+      if (!searchTerm) {
+        // If search is empty, reload all FAQs
+        loadFAQFromServer();
+        return;
+      }
+
+      if (socket && socket.connected) {
+        socket.emit('search_faq', { query: searchTerm });
+      } else {
+        // Fallback to client-side search
+        const fallbackData = getFallbackFAQData();
+        const results = searchInFAQ(fallbackData, searchTerm);
+        displayFAQSearchResults(results);
+      }
+    }
+
+    // Client-side search fallback
+    function searchInFAQ(data, searchTerm) {
+      const results = [];
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      
+      data.forEach(category => {
+        category.questions.forEach((faq, index) => {
+          if (faq.q.toLowerCase().includes(lowerSearchTerm) || 
+              faq.a.toLowerCase().includes(lowerSearchTerm)) {
+            results.push({
+              category: category.category,
+              question: faq.q,
+              answer: faq.a,
+              index: index
+            });
+          }
+        });
+      });
+      
+      return results;
+    }
+
+    // Fallback FAQ data (used when socket is not connected)
+    function getFallbackFAQData() {
+      return [
+        {
+          category: "Patient Registration",
+          questions: [
+            {
+              q: "How do I register a new patient?",
+              a: "Fill in all required fields (marked with *) in the registration form. Select tests from the dropdown, then click 'Add Patient'."
+            },
+            {
+              q: "What is the difference between Registration Date and Reporting Date?",
+              a: "Registration Date is when patient is registered in system. Reporting Date is when test results are expected (can be future date)."
+            },
+            {
+              q: "Can I edit patient information after registration?",
+              a: "Yes, go to 'Manage All Patients' and click edit on any patient record."
+            }
+          ]
+        },
+        {
+          category: "Test Selection",
+          questions: [
+            {
+              q: "How do I select multiple tests?",
+              a: "Type test name in the search box or scroll to find tests. You can select multiple tests by clicking on them or using Ctrl+Click."
+            },
+            {
+              q: "How do I remove a selected test?",
+              a: "Click the '×' icon next to the test in the Selected Tests section, or deselect it from the dropdown."
+            },
+            {
+              q: "Where can I see the total amount?",
+              a: "Total amount is automatically calculated and displayed below the selected tests."
+            }
+          ]
+        },
+        {
+          category: "Receipts & Reports",
+          questions: [
+            {
+              q: "How do I print a receipt?",
+              a: "After successful registration, click 'Print' button in the success popup. This will generate a printable receipt."
+            },
+            {
+              q: "How do I download PDF receipt?",
+              a: "Click 'Download PDF' button in the success popup to save the receipt as PDF file."
+            },
+            {
+              q: "Where can I view all patient records?",
+              a: "Click 'Go to Patients Management' button to view, edit, and manage all patient records."
+            },
+            {
+              q: "How do I view lab reports?",
+              a: "Click 'Go to Lab Reports' button to access detailed test reports with normal ranges."
+            }
+          ]
+        },
+        {
+          category: "Common Issues",
+          questions: [
+            {
+              q: "Form is not submitting. What should I do?",
+              a: "Check for red error messages. All required fields must be filled correctly. Ensure at least one test is selected."
+            },
+            {
+              q: "Tests dropdown is empty. What's wrong?",
+              a: "Refresh the page. If still empty, contact administrator to ensure tests are properly configured in the system."
+            },
+            {
+              q: "How do I reset the form?",
+              a: "Refresh the page or clear all fields manually. The form will reset automatically after successful submission."
+            }
+          ]
+        }
+      ];
+    }
+
+    // FAQ toggle functions
+    function toggleFAQ() {
+      if (isFAQOpen) {
+        closeFAQ();
+      } else {
+        openFAQ();
+      }
+    }
+
+    function openFAQ() {
+      closeChatbot();
+      loadFAQFromServer();
+      $('#faqContainer').css('display', 'flex');
+      isFAQOpen = true;
+      setTimeout(() => $('#faqSearch').focus(), 100);
+    }
+
+    function closeFAQ() {
+      $('#faqContainer').hide();
+      isFAQOpen = false;
+      $('#faqSearch').val('');
+    }
+
+    // ============================
+    // SOCKET.IO CHATBOT FUNCTIONALITY
+    // ============================
+    
+    // Chatbot quick replies
+    const quickReplies = [
+      "Patient registration",
+      "Select tests",
+      "Print receipt",
+      "Download PDF",
+      "Required fields",
+      "View all patients"
+    ];
+
+    // Initialize chatbot
+    function initChatbot() {
+      addBotMessage("Hello! I'm your reception assistant. How can I help you today?");
+      updateQuickReplies();
+    }
+
+    // Toggle chatbot
+    function toggleChatbot() {
+      if (isChatbotOpen) {
+        closeChatbot();
+      } else {
+        openChatbot();
+      }
+    }
+
+    function openChatbot() {
+      closeFAQ();
+      $('#chatbotContainer').css('display', 'flex');
+      isChatbotOpen = true;
+      initChatbot();
+      setTimeout(() => {
+        $('#chatbotBody').scrollTop($('#chatbotBody')[0].scrollHeight);
+        $('#chatInput').focus();
+      }, 100);
+    }
+
+    function closeChatbot() {
+      $('#chatbotContainer').hide();
+      isChatbotOpen = false;
+      $('#chatInput').val('');
+    }
+
+    // Handle Enter key in chat
+    function handleChatInput(e) {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    // Send message using Socket.IO
+    function sendMessage() {
+      const input = $('#chatInput');
+      const message = input.val().trim();
+      
+      if (!message) return;
+      
+      addUserMessage(message);
+      input.val('');
+      
+      // Send message via Socket.IO if connected
+      if (socket && socket.connected) {
+        socket.emit('chat_message', {
+          message: message,
+          timestamp: new Date().toISOString(),
+          context: 'reception'
+        });
+      } else {
+        // Fallback to local processing
+        setTimeout(() => {
+          processMessageLocally(message);
+        }, 500);
+      }
+    }
+
+    // Process message locally (fallback)
+    function processMessageLocally(message) {
+      const lowerMessage = message.toLowerCase();
+      let response = '';
+      
+      // Simple local responses
+      if (lowerMessage.includes('patient registration') || lowerMessage.includes('register patient')) {
+        response = "To register a patient: 1) Fill all required fields 2) Select tests from dropdown 3) Click 'Add Patient' 4) Download/Print receipt from success popup.";
+      } else if (lowerMessage.includes('select test') || lowerMessage.includes('choose test')) {
+        response = "Type test name in the search box or scroll through the list. Click on tests to select multiple. Selected tests appear below with total amount.";
+      } else if (lowerMessage.includes('print receipt') || lowerMessage.includes('print')) {
+        response = "After successful registration, use the 'Print' button in the green success popup. It will open a new window with printable receipt.";
+      } else if (lowerMessage.includes('download') || lowerMessage.includes('pdf')) {
+        response = "Click 'Download PDF' in the success popup to save receipt as PDF file.";
+      } else if (lowerMessage.includes('required') || lowerMessage.includes('mandatory')) {
+        response = "Required fields are marked with red asterisk (*): Registration Date, Reporting Date, Patient Name, Gender, Age, Doctor Name, and at least one test.";
+      } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
+        response = "Hello! I'm your reception assistant. How can I help you today?";
+      } else {
+        response = "I'm here to help with reception tasks. Try asking about registering patients, selecting tests, or printing receipts.";
+      }
+      
+      addBotMessage(response);
+    }
+
+    // Add user message to chat
+    function addUserMessage(text) {
+      const chatBody = $('#chatbotBody');
+      const messageDiv = $(`
+        <div class="message user-message">
+          <div class="message-bubble user-bubble">
+            ${text}
+          </div>
+        </div>
+      `);
+      
+      chatBody.append(messageDiv);
+      chatBody.scrollTop(chatBody[0].scrollHeight);
+    }
+
+    // Add bot message to chat
+    function addBotMessage(text) {
+      const chatBody = $('#chatbotBody');
+      const messageDiv = $(`
+        <div class="message bot-message">
+          <div class="message-bubble bot-bubble">
+            ${text}
+          </div>
+        </div>
+      `);
+      
+      chatBody.append(messageDiv);
+      chatBody.scrollTop(chatBody[0].scrollHeight);
+    }
+
+    // Update quick replies
+    function updateQuickReplies() {
+      const quickRepliesDiv = $('#quickReplies');
+      quickRepliesDiv.empty();
+      
+      quickReplies.forEach(reply => {
+        const button = $(`<button class="quick-reply">${reply}</button>`);
+        button.on('click', () => {
+          $('#chatInput').val(reply);
+          sendMessage();
+        });
+        quickRepliesDiv.append(button);
+      });
+    }
+
+    // ============================
+    // UTILITY FUNCTIONS
+    // ============================
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+      const bgColor = type === 'error' ? 'bg-danger' : 
+                      type === 'success' ? 'bg-success' : 
+                      type === 'warning' ? 'bg-warning' : 'bg-info';
+      
+      const toast = $(`<div class="toast align-items-center text-white ${bgColor} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>`);
+      
+      $('#toastContainer').append(toast);
+      const bsToast = new bootstrap.Toast(toast[0]);
+      bsToast.show();
+      
+      toast.on('hidden.bs.toast', function() {
+        $(this).remove();
+      });
+    }
+
+    // Initialize event listeners
+    $(document).ready(function() {
+      // Close help panels when clicking outside
+      $(document).on('click', function(e) {
+        if (!$(e.target).closest('.chatbot-container, .chatbot-btn').length) {
+          closeChatbot();
+        }
+        if (!$(e.target).closest('.faq-container, .faq-btn').length) {
+          closeFAQ();
+        }
+      });
+    });
+
+    // ============================
+    // EXISTING TEST RESULTS FUNCTIONS (unchanged)
+    // ============================
+    
+    function showTestResultsEntry() {
+        const resultsSection = $('#testResultsSection');
+        const container = $('#testResultsContainer');
+        
+        if (selectedTests.length === 0) {
+            resultsSection.hide();
+            return;
+        }
+        
+        // Clear previous entries
+        container.empty();
+        
+        // Add input for each selected test
+        selectedTests.forEach((test, index) => {
+            const testDiv = $(`
+                <div class="card mb-3 test-result-card">
+                    <div class="card-body">
+                        <h6>${test.name} - Rs. ${test.price.toFixed(2)}</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Result Value</label>
+                                <input type="text" class="form-control result-value" 
+                                       data-test-id="${test.id}" 
+                                       placeholder="Enter result">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Normal Range</label>
+                                <div class="form-control range-display" 
+                                     id="range_${test.id}">
+                                    Loading...
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Interpretation</label>
+                                <div class="form-control interpretation-display" 
+                                     id="interpret_${test.id}">
+                                    Enter result first
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+            
+            container.append(testDiv);
+            
+            // Fetch test details and display ranges
+            fetchTestDetails(test.id);
+        });
+        
+        resultsSection.show();
+    }
+
+    // Function to fetch test details
+    async function fetchTestDetails(testId) {
+        try {
+            const response = await fetch(`/patients/tests/${testId}/details`);
+            const test = await response.json();
+            
+            // Display ranges
+            const gender = $('#gender').val();
+            let rangeText = '';
+            
+            if (test.Range_Text) {
+                rangeText = test.Range_Text;
+            } else if (gender === 'Male' && test.Male_Range_Min) {
+                rangeText = `Male: ${test.Male_Range_Min}-${test.Male_Range_Max} ${test.Range_Unit}`;
+            } else if (gender === 'Female' && test.Female_Range_Min) {
+                rangeText = `Female: ${test.Female_Range_Min}-${test.Female_Range_Max} ${test.Range_Unit}`;
+            }
+            
+            $(`#range_${testId}`).text(rangeText || 'See report');
+            
+            // Set up real-time interpretation
+            $(`input[data-test-id="${testId}"]`).on('input', function() {
+                const resultValue = $(this).val();
+                if (resultValue) {
+                    const interpretation = interpretTestResult(test, resultValue, gender);
+                    $(`#interpret_${testId}`).text(interpretation);
+                } else {
+                    $(`#interpret_${testId}`).text('Enter result first');
+                }
+            });
+            
+        } catch (error) {
+            console.error('Error fetching test details:', error);
+        }
+    }
+
+    // Function to interpret test result
+    function interpretTestResult(test, resultValue, gender) {
+        try {
+            const result = parseFloat(resultValue);
+            if (isNaN(result)) return 'Invalid result';
+            
+            let min, max;
+            if (gender === 'Male') {
+                min = test.Male_Range_Min;
+                max = test.Male_Range_Max;
+            } else {
+                min = test.Female_Range_Min;
+                max = test.Female_Range_Max;
+            }
+            
+            if (min !== null && max !== null) {
+                if (result < min) {
+                    return test.Interpretation_Low || 'Below normal range';
+                } else if (result > max) {
+                    return test.Interpretation_High || 'Above normal range';
+                } else {
+                    return test.Interpretation_Normal || 'Within normal range';
+                }
+            }
+            
+            return 'See detailed report';
+        } catch (e) {
+            return 'Invalid result format';
+        }
+    }
+  </script>
+</body>
+</html>
